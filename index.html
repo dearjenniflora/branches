@@ -1436,6 +1436,16 @@
       settings: "branches.settings"
     };
 
+    /* =========================================================
+       AI PROXY
+       把下面换成你自己的 Cloudflare Worker 地址。
+       AI 不可用时，前端会自动降级为本地匹配 / 本地 Demo，
+       所以就算这里还是占位符，页面也能正常跑。
+    ========================================================= */
+
+    const AI_PROXY =
+      "https://branchesai.dearjenniflora.workers.dev";
+
     const branches = [
       {
         slug: "teach-me-like-this",
@@ -1789,7 +1799,7 @@
       );
     }
 
-    function submitNeed(event) {
+    async function submitNeed(event) {
       event.preventDefault();
 
       const input = document.querySelector("#needInput");
@@ -1807,17 +1817,72 @@
       state.view = "matching";
       render();
 
-      const branch = matchNeed(need);
+      /* 「正在寻找」的画面至少停 720ms，避免一闪而过 */
+      const started = Date.now();
 
-      setTimeout(() => {
-        if (branch) {
-          go("branch", branch.slug);
+      const settle = async () => {
+        const rest = 720 - (Date.now() - started);
+
+        if (rest > 0) {
+          await new Promise(resolve => setTimeout(resolve, rest));
+        }
+      };
+
+      try {
+        const response = await fetch(AI_PROXY, {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            action: "match",
+            need
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        console.log("枝间 AI 匹配：", result);
+
+        await settle();
+
+        if (result.slug && getBranch(result.slug)) {
+          go("branch", result.slug);
         } else {
           state.view = "grow";
           location.hash = "grow";
           render();
         }
-      }, 720);
+
+      } catch (error) {
+        console.error("AI matcher failed:", error);
+
+        /*
+          AI 暂时挂掉时，不让产品直接死掉。
+          自动降级为本地 matcher。
+        */
+
+        const fallback = matchNeed(need);
+
+        await settle();
+
+        if (fallback) {
+          showToast("AI 暂时没有回应，已使用本地匹配。");
+
+          go("branch", fallback.slug);
+
+        } else {
+          state.view = "grow";
+          location.hash = "grow";
+          render();
+        }
+      }
     }
 
     function matchingView() {
@@ -2253,7 +2318,7 @@
        RUN MOCK
     ========================================================= */
 
-    function runBranch(event, slug) {
+    async function runBranch(event, slug) {
       event.preventDefault();
 
       const form = event.currentTarget;
@@ -2267,11 +2332,11 @@
         <div class="mock-output">
 
           <div class="output-title">
-            MOCK RESULT
+            BRANCH IS THINKING
           </div>
 
           <div class="output-body">
-            ${mockResult(slug, values)}
+            正在根据你的情况生长出这一次的结果……
           </div>
 
         </div>
@@ -2281,6 +2346,66 @@
         behavior: "smooth",
         block: "start"
       });
+
+      try {
+        const response = await fetch(AI_PROXY, {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            action: "run",
+            slug,
+            inputs: values
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        output.innerHTML = `
+          <div class="mock-output">
+
+            <div class="output-title">
+              BRANCH RESULT
+            </div>
+
+            <div
+              class="output-body"
+              style="white-space:pre-wrap"
+            >${escapeHTML(data.result)}</div>
+
+          </div>
+        `;
+
+      } catch (error) {
+        console.error("Branch AI failed:", error);
+
+        /*
+          网络 / API 挂了以后，Demo 依旧能跑。
+        */
+
+        output.innerHTML = `
+          <div class="mock-output">
+
+            <div class="output-title">
+              LOCAL FALLBACK
+            </div>
+
+            <div class="output-body">
+              ${mockResult(slug, values)}
+            </div>
+
+          </div>
+        `;
+
+        showToast("AI 暂时没有回应，已展示本地 Demo。");
+      }
     }
 
     function mockResult(slug, data) {
