@@ -1,1248 +1,3140 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>枝间 ZHIJIAN — Branch 的承载、发现与匹配</title>
-<style>
-/* ============================================================
-   枝间 ZHIJIAN · Monet-inspired oil painting + soft embossed UI
-   ============================================================ */
-:root{
-  /* 产品原有配色 */
-  --bg-1:#FCEAE2; --bg-2:#CCEBF5; --bg-3:#F5E6E9;
-  --cream-1:#F0F0C8; --cream-2:#FFFECC; --cream-3:#EED9BE;
-  --ink:#405838; --ink-soft:#5d6b4e;
-  --stem-1:#405838; --stem-2:#989058; --stem-3:#90A868;
-  --pink-1:#F1BEC5; --pink-2:#EF8E9D; --pink-3:#F9D8CC;
-  --blue-1:#80B0D8; --blue-2:#98C0E8; --blue-3:#CCEBF5;
-  --green-1:#80B0A8; --green-2:#90B080; --green-3:#D8F6CA;
-  --yellow-1:#F0C030; --yellow-2:#E8D078; --yellow-3:#FFFFBF;
-  --danger:#EF8E9D; --danger-2:#F28689;
-  --lilac:#C0C0D8;
-  --shadow-warm: rgba(152,144,88,.28);
-  --shadow-cool: rgba(128,176,168,.25);
-  --shadow-ink: rgba(64,88,56,.10);
-  --light: rgba(255,255,255,.75);
-  --ease: cubic-bezier(.22,.61,.36,1);
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="description"
+    content="枝间 BRANCHES — 看见你的需求，多小都值得被看见。"
+  />
+  <title>枝间 · BRANCHES</title>
 
-*{ box-sizing:border-box; margin:0; padding:0; }
-html,body{ height:100%; }
-body{
-  font-family:"PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
-  color:var(--ink);
-  -webkit-font-smoothing:antialiased;
-  min-height:100vh;
-  display:flex; flex-direction:column;
-  overflow-x:hidden;
-}
+  <style>
+    /* =========================================================
+       01. DESIGN TOKENS
+       Minimal from afar.
+       Intricate up close.
+       Tactile when touched.
+    ========================================================= */
 
-/* ============ 01 · 背景材质：莫奈式画布 ============ */
-.canvas-bg{
-  position:fixed; inset:0; z-index:-4; overflow:hidden;
-  /* 柔和的大半径径向晕染，模拟颜料在空气中的扩散 */
-  background:
-    radial-gradient(120% 90% at 12% 6%,  rgba(204,235,245,.92), transparent 55%),
-    radial-gradient(130% 100% at 90% 10%, rgba(245,230,233,.95), transparent 60%),
-    radial-gradient(115% 95% at 82% 92%, rgba(252,234,226,.95), transparent 56%),
-    radial-gradient(100% 100% at 16% 94%, rgba(240,240,200,.65), transparent 55%),
-    radial-gradient(60% 40% at 50% 40%, rgba(255,254,204,.35), transparent 70%),
-    #FCEAE2;
-}
-/* 油画笔触噪点：fractalNoise + 高斯模糊 → 手绘质感 */
-.canvas-grain{
-  position:fixed; inset:0; z-index:-3; pointer-events:none;
-  opacity:.9; mix-blend-mode:multiply;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006 0.012' numOctaves='4' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeGaussianBlur stdDeviation='1.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.5'/%3E%3C/svg%3E");
-  filter:blur(.2px);
-}
-/* 边缘较明显的笔触 */
-.edge-strokes{ position:fixed; inset:0; z-index:-2; pointer-events:none; }
-.edge-strokes i{
-  position:absolute; border-radius:50%; filter:blur(26px); opacity:.38; display:block;
-}
-.edge-strokes i:nth-child(1){ width:46vw; height:38vh; left:-14vw; top:-10vh; background:radial-gradient(closest-side, rgba(128,176,216,.55), transparent 70%); transform:rotate(-18deg); }
-.edge-strokes i:nth-child(2){ width:42vw; height:34vh; right:-12vw; top:6vh; background:radial-gradient(closest-side, rgba(241,190,197,.6), transparent 70%); transform:rotate(14deg); }
-.edge-strokes i:nth-child(3){ width:48vw; height:30vh; left:-6vw; bottom:-8vh; background:radial-gradient(closest-side, rgba(144,168,104,.5), transparent 72%); transform:rotate(10deg); }
-.edge-strokes i:nth-child(4){ width:40vw; height:32vh; right:-10vw; bottom:12vh; background:radial-gradient(closest-side, rgba(240,192,48,.4), transparent 72%); transform:rotate(-12deg); }
+    :root {
+      --paper: #f6f0e5;
+      --paper-soft: #fbf7ee;
+      --paper-warm: #eee4d1;
 
-/* ============ 02 · 浮雕材质 ============ */
-.relief{
-  background:
-    linear-gradient(145deg, rgba(255,255,255,.62), rgba(255,255,255,0) 46%),
-    linear-gradient(325deg, rgba(152,144,88,.13), rgba(255,255,255,0) 62%),
-    linear-gradient(0deg, var(--cream-1), var(--cream-2));
-  box-shadow:
-    0 1px 1px var(--shadow-ink),
-    3px 5px 12px var(--shadow-warm),
-    -3px -4px 10px var(--light),
-    inset 0 1px 0 rgba(255,255,255,.65);
-  border:1px solid rgba(255,255,255,.28);
-}
-.inset-relief{
-  background:
-    linear-gradient(180deg, rgba(152,144,88,.10), rgba(255,255,255,.28)),
-    var(--cream-2);
-  box-shadow:
-    inset 2px 3px 8px var(--shadow-warm),
-    inset -2px -3px 8px var(--light);
-  border:1px solid rgba(152,144,88,.08);
-}
-.inset-relief:focus{
-  outline:none;
-  box-shadow:
-    inset 2px 3px 8px var(--shadow-warm),
-    inset -2px -3px 8px var(--light),
-    0 0 0 4px rgba(128,176,216,.10),
-    0 0 24px rgba(241,190,197,.40),
-    0 0 34px rgba(128,176,216,.18);
-}
-.surface{ /* 整页唯一大型 cream relief surface */
-  background:
-    linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,0) 48%),
-    linear-gradient(320deg, rgba(152,144,88,.10), rgba(255,255,255,0) 58%),
-    linear-gradient(0deg, rgba(240,240,200,.55), rgba(255,254,204,.55));
-  box-shadow:
-    0 2px 3px var(--shadow-ink),
-    6px 9px 26px var(--shadow-warm),
-    -6px -7px 20px var(--light),
-    inset 0 1px 0 rgba(255,255,255,.6);
-  border:1px solid rgba(255,255,255,.30);
-  border-radius:26px;
-}
+      --ink: #34302c;
+      --ink-soft: #696158;
+      --ink-faint: #8d8479;
 
-/* ============ 03 · 文字浮雕 ============ */
-.text-emboss{
-  color:var(--ink);
-  text-shadow:
-    0 1px 0 rgba(255,255,255,.9),
-    0 -1px 1px rgba(64,88,56,.30);
-}
-.text-emboss-soft{
-  color:var(--ink);
-  text-shadow:0 1px 0 rgba(255,255,255,.8);
-}
+      --sage: #a9b7a1;
+      --sage-soft: #dbe2d4;
+      --blue: #aabec7;
+      --blue-soft: #dbe4e6;
+      --rose: #ceb0aa;
+      --rose-soft: #ead9d4;
+      --butter: #eadcaf;
+      --pearl: #f6f1df;
 
-/* ============ 04 · 植物 ============ */
-.stem-path{ fill:none; stroke-linecap:round; }
-.flower-svg{ display:block; overflow:visible; }
-.flower-svg .petal{ transform-origin:50px 50px; }
-.sway{ animation:sway 7s ease-in-out infinite; transform-origin:bottom center; }
-@keyframes sway{ 0%,100%{ transform:rotate(var(--sway,0deg));} 50%{ transform:rotate(calc(var(--sway,0deg) + 1.4deg));} }
+      --line: rgba(70, 62, 52, 0.12);
+      --line-strong: rgba(70, 62, 52, 0.2);
 
-/* ============ 05 · 按钮 ============ */
-.btn{
-  font-family:inherit; cursor:pointer; border:none; border-radius:999px;
-  font-size:14px; letter-spacing:.04em; color:var(--ink);
-  transition:transform .22s var(--ease), box-shadow .22s var(--ease), background .22s var(--ease);
-  -webkit-tap-highlight-color:transparent;
-}
-.btn-primary{
-  padding:12px 26px;
-  background:
-    linear-gradient(145deg, rgba(255,255,255,.65), rgba(255,255,255,0) 46%),
-    linear-gradient(325deg, rgba(152,144,88,.16), rgba(255,255,255,0) 60%),
-    linear-gradient(0deg, var(--cream-1), var(--cream-2));
-  box-shadow:
-    0 2px 3px var(--shadow-ink),
-    4px 6px 14px var(--shadow-warm),
-    -4px -5px 12px var(--light),
-    inset 0 1px 0 rgba(255,255,255,.7);
-  border:1px solid rgba(255,255,255,.34);
-  font-weight:600;
-}
-.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 4px 6px var(--shadow-ink), 6px 9px 18px var(--shadow-warm), -5px -6px 14px var(--light), inset 0 1px 0 rgba(255,255,255,.7); }
-.btn-primary:active{ transform:translateY(1px); box-shadow:inset 2px 3px 8px var(--shadow-warm), inset -2px -3px 8px var(--light); }
-.btn-primary[disabled]{ opacity:.55; cursor:not-allowed; }
-.btn-secondary{
-  padding:11px 22px;
-  background:linear-gradient(0deg, rgba(240,240,200,.30), rgba(255,254,204,.45));
-  box-shadow:
-    inset 0 0 0 1px rgba(152,144,88,.10),
-    0 1px 2px var(--shadow-ink),
-    2px 3px 8px rgba(152,144,88,.14),
-    -2px -3px 8px var(--light);
-}
-.btn-secondary:hover{ transform:translateY(-1px); box-shadow:inset 0 0 0 1px rgba(152,144,88,.16), 0 2px 3px var(--shadow-ink), 3px 5px 12px rgba(152,144,88,.18), -3px -4px 10px var(--light); }
-.btn-secondary:active{ transform:translateY(1px); box-shadow:inset 2px 3px 7px var(--shadow-warm), inset -2px -3px 7px var(--light); }
-.btn-ghost{ background:transparent; padding:8px 14px; color:var(--ink-soft); box-shadow:none; font-size:13px; }
-.btn-ghost:hover{ color:var(--ink); text-shadow:0 1px 0 rgba(255,255,255,.8); }
+      --shadow-soft:
+        0 14px 28px rgba(102, 87, 63, 0.08),
+        0 4px 8px rgba(102, 87, 63, 0.07);
 
-/* ============ 06 · 输入 ============ */
-.field{ display:flex; flex-direction:column; gap:7px; margin-bottom:16px; }
-.field label{ font-size:12.5px; letter-spacing:.06em; color:var(--ink-soft); text-shadow:0 1px 0 rgba(255,255,255,.7); }
-.field input,.field textarea,.field select{
-  font-family:inherit; font-size:15px; color:var(--ink);
-  padding:12px 16px; border-radius:16px;
-  background:linear-gradient(180deg, rgba(152,144,88,.09), rgba(255,255,255,.30)), var(--cream-2);
-  box-shadow:inset 2px 3px 8px var(--shadow-warm), inset -2px -3px 8px var(--light);
-  border:1px solid rgba(152,144,88,.08);
-  transition:box-shadow .25s var(--ease);
-}
-.field input:focus,.field textarea:focus,.field select:focus{
-  outline:none;
-  box-shadow:inset 2px 3px 8px var(--shadow-warm), inset -2px -3px 8px var(--light),
-    0 0 0 4px rgba(128,176,216,.10), 0 0 22px rgba(241,190,197,.36), 0 0 30px rgba(128,176,216,.16);
-}
-.field textarea{ resize:vertical; min-height:96px; line-height:1.6; }
-.field input::placeholder,.field textarea::placeholder{ color:rgba(64,88,56,.42); }
-.field select{ appearance:none; -webkit-appearance:none;
-  background-image:linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
-  background-position:calc(100% - 20px) 50%, calc(100% - 14px) 50%;
-  background-size:6px 6px; background-repeat:no-repeat;
-}
+      --shadow-button:
+        0 9px 15px rgba(114, 96, 65, 0.13),
+        0 2px 4px rgba(89, 76, 55, 0.1),
+        inset 0 1.5px 0 rgba(255,255,255,.88);
 
-/* ============ 布局 ============ */
-nav{
-  position:relative; z-index:30;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:14px clamp(16px,4vw,34px);
-  background:linear-gradient(180deg, rgba(252,234,226,.72), rgba(252,234,226,0));
-}
-.brand{ display:flex; align-items:baseline; gap:10px; cursor:pointer; user-select:none; }
-.brand .logo{ font-size:19px; font-weight:700; letter-spacing:.18em; }
-.brand .brand-sub{ font-size:10.5px; letter-spacing:.22em; color:var(--ink-soft); text-transform:uppercase; }
-.nav-links{ display:flex; gap:6px; }
-.nav-links button{
-  font-family:inherit; font-size:13.5px; letter-spacing:.05em; color:var(--ink-soft);
-  background:transparent; border:none; cursor:pointer; padding:8px 14px; border-radius:999px;
-  transition:background .2s, box-shadow .2s, color .2s; -webkit-tap-highlight-color:transparent;
-}
-.nav-links button:hover{ color:var(--ink); }
-.nav-links button.active{
-  color:var(--ink); font-weight:600;
-  background:linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,0) 50%), rgba(240,240,200,.5);
-  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.16), -2px -3px 8px var(--light), inset 0 1px 0 rgba(255,255,255,.6);
-}
+      --shadow-button-hover:
+        0 13px 22px rgba(114, 96, 65, 0.14),
+        0 4px 7px rgba(89, 76, 55, 0.1),
+        inset 0 2px 0 rgba(255,255,255,.95);
 
-main{ position:relative; flex:1; overflow:hidden; }
-.view{
-  position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
-  opacity:0; pointer-events:none; filter:blur(10px) saturate(.92);
-  transition:opacity .5s var(--ease), filter .5s var(--ease);
-}
-.view.active{ opacity:1; pointer-events:auto; filter:blur(0) saturate(1); }
-.container{ width:min(1060px, 92vw); margin:0 auto; padding:22px 0 72px; }
+      --shadow-inset:
+        inset 0 3px 8px rgba(107, 91, 67, 0.11),
+        inset 0 -1px 1px rgba(255,255,255,.8);
 
-/* ============ Opening ============ */
-.opening{ text-align:center; padding-top:clamp(18px,6vh,64px); }
-.slogan{ font-size:clamp(30px,6vw,52px); font-weight:700; letter-spacing:.06em; }
-.slogan-sub{ margin-top:12px; font-size:clamp(14px,2.6vw,17px); color:var(--ink-soft); letter-spacing:.08em; text-shadow:0 1px 0 rgba(255,255,255,.7); }
-.opening-flower{
-  position:relative; width:min(380px,80vw); height:min(380px,80vw);
-  margin:clamp(16px,4vh,34px) auto 0; transition:transform 1.3s var(--ease), filter 1.3s var(--ease);
-}
-.opening-flower svg{ position:absolute; inset:0; width:100%; height:100%; }
-.opening-flower.typing{ transform:scale(1.045); filter:saturate(1.2) blur(1.1px); }
-.flower-core{
-  position:absolute; left:50%; top:52%; transform:translate(-50%,-50%);
-  width:58%; z-index:3; display:flex; flex-direction:column; gap:9px;
-}
-.flower-core label{ font-size:12px; letter-spacing:.2em; color:var(--ink-soft); text-shadow:0 1px 0 rgba(255,255,255,.7); }
-.flower-core input{
-  font-family:inherit; font-size:16px; color:var(--ink); text-align:center;
-  padding:15px 16px; border-radius:999px;
-  background:linear-gradient(180deg, rgba(152,144,88,.12), rgba(255,255,255,.32)), rgba(255,254,204,.82);
-  box-shadow:inset 3px 4px 10px rgba(152,144,88,.32), inset -3px -4px 10px rgba(255,255,255,.75);
-  border:1px solid rgba(152,144,88,.06); transition:box-shadow .25s var(--ease);
-}
-.flower-core input:focus{
-  outline:none;
-  box-shadow:inset 3px 4px 10px rgba(152,144,88,.32), inset -3px -4px 10px rgba(255,255,255,.75),
-    0 0 26px rgba(241,190,197,.55), 0 0 36px rgba(128,176,216,.25);
-}
-.flower-core input::placeholder{ color:rgba(64,88,56,.44); }
-.want-bar{
-  display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:12px;
-  margin-top:clamp(6px,2vh,18px);
-}
-.want-bar .inset-relief{ flex:1 1 260px; max-width:420px; font-family:inherit; font-size:15px; color:var(--ink); padding:13px 18px; border-radius:999px; }
-.want-bar .inset-relief::placeholder{ color:rgba(64,88,56,.42); }
-.hint{ margin-top:16px; font-size:12.5px; color:var(--ink-soft); letter-spacing:.05em; opacity:.85; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+      --radius-s: 12px;
+      --radius-m: 18px;
+      --radius-l: 26px;
+      --radius-xl: 34px;
 
-/* ============ Branches 花园 ============ */
-.garden-head{ text-align:center; padding-top:clamp(10px,3vh,30px); }
-.garden-head h1{ font-size:clamp(24px,4.5vw,36px); letter-spacing:.08em; }
-.garden-head p{ margin-top:8px; color:var(--ink-soft); font-size:14px; letter-spacing:.06em; }
-.garden{ position:relative; height:min(72vh,760px); margin-top:8px; }
-.plant{ position:absolute; bottom:4%; width:180px; height:100%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.plant .stem-wrap{ position:absolute; bottom:0; left:50%; transform:translateX(-50%); height:100%; width:90px; }
-.plant .stem-wrap svg{ width:100%; height:100%; overflow:visible; }
-.plant .flower-wrap{ position:absolute; top:calc(100% - var(--fh, 0px)); left:50%; transform:translateX(-50%); transition:transform .4s var(--ease); }
-.plant:hover .flower-wrap{ transform:translateX(-50%) translateY(-4px); }
-.plant .branch-tag{
-  position:absolute; left:50%; transform:translate(-50%,-6px); top:calc(100% - var(--fh,0px) + 14px);
-  white-space:nowrap; font-size:12.5px; letter-spacing:.05em; color:var(--ink);
-  padding:7px 14px; border-radius:999px; opacity:0; pointer-events:none;
-  background:linear-gradient(145deg, rgba(255,255,255,.6), rgba(255,255,255,0) 50%), rgba(240,240,200,.82);
-  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.16), -2px -3px 8px var(--light), inset 0 1px 0 rgba(255,255,255,.6);
-  transition:opacity .25s var(--ease), transform .25s var(--ease);
-}
-.plant:hover .branch-tag{ opacity:1; transform:translate(-50%,0); }
-.plant .branch-name-m{ position:absolute; left:50%; transform:translateX(-50%); bottom:-8px; font-size:11px; color:var(--ink-soft); opacity:.65; }
+      --ease: cubic-bezier(.22,.8,.32,1);
+    }
 
-/* ============ Detail ============ */
-.back-link{ margin-bottom:14px; }
-.detail-head{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
-.detail-head .flower-mini{ flex:0 0 auto; }
-.detail-head .meta{ min-width:0; }
-.branch-tag-text{ font-size:11px; letter-spacing:.24em; color:var(--ink-soft); text-transform:uppercase; margin-bottom:6px; }
-.detail-head h1{ font-size:clamp(24px,4.6vw,38px); letter-spacing:.04em; }
-.detail-problem{ margin-top:10px; font-size:15px; color:var(--ink-soft); line-height:1.7; max-width:620px; text-shadow:0 1px 0 rgba(255,255,255,.6); }
-.detail-surface{ padding:clamp(18px,3.5vw,34px); }
-.detail-surface h3{ font-size:13px; letter-spacing:.18em; color:var(--ink-soft); margin-bottom:18px; font-weight:600; }
-.detail-actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; justify-content:center; }
-.berry-path{ position:relative; margin-top:20px; height:36px; display:flex; align-items:center; justify-content:center; }
-.berry{
-  width:14px; height:14px; border-radius:50%; opacity:0; transform:scale(0);
-  background:radial-gradient(circle at 34% 30%, #FFFECC, var(--berry,#90A868) 62%, #405838);
-  box-shadow:0 1px 3px var(--shadow-ink), 2px 3px 6px rgba(152,144,88,.3);
-  transition:opacity .5s var(--ease), transform .5s var(--ease);
-}
-.berry.show{ opacity:1; transform:scale(1); }
+    * {
+      box-sizing: border-box;
+    }
 
-/* ============ 我的枝间 ============ */
-.my-tabs{ display:flex; gap:8px; justify-content:center; margin-bottom:24px; flex-wrap:wrap; }
-.my-panel{ display:none; }
-.my-panel.active{ display:block; animation:fadeup .45s var(--ease); }
-@keyframes fadeup{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none;} }
-.settings-card{ max-width:560px; margin:0 auto; padding:26px; }
-.settings-card .note{ font-size:12.5px; color:var(--ink-soft); line-height:1.7; margin-bottom:18px; }
-.memory-list{ display:flex; flex-direction:column; gap:14px; max-width:640px; margin:0 auto; }
-.mem-item{ padding:16px 20px; border-radius:18px; }
-.mem-item .mem-kind{ font-size:10.5px; letter-spacing:.2em; color:var(--ink-soft); text-transform:uppercase; }
-.mem-item .mem-body{ margin-top:8px; font-size:14.5px; line-height:1.65; }
-.mem-item .mem-time{ margin-top:8px; font-size:11.5px; color:var(--ink-soft); opacity:.8; }
-.mem-empty{ text-align:center; color:var(--ink-soft); padding:34px 0; font-size:14px; letter-spacing:.05em; }
+    html {
+      scroll-behavior: smooth;
+    }
 
-/* ============ 模态 ============ */
-.modal-mask{
-  position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; padding:20px;
-  background:radial-gradient(circle at 50% 45%, rgba(252,234,226,.55), rgba(252,234,226,.88));
-  backdrop-filter:blur(6px);
-}
-.modal-mask.show{ display:flex; }
-.modal-card{
-  width:min(460px,92vw); padding:28px; border-radius:26px;
-  animation:fadeup .4s var(--ease);
-}
-.modal-card h3{ font-size:18px; letter-spacing:.04em; margin-bottom:6px; }
-.modal-card p{ font-size:13px; color:var(--ink-soft); line-height:1.6; margin-bottom:16px; }
-.modal-card .row{ display:flex; gap:10px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap; }
-.done-badge{
-  display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink);
-  padding:10px 16px; border-radius:999px; margin-top:6px;
-  background:linear-gradient(145deg, rgba(255,255,255,.6), rgba(255,255,255,0) 50%), rgba(216,246,202,.7);
-  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(144,168,104,.22), -2px -3px 8px var(--light);
-}
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(234,220,175,.42), transparent 30%),
+        radial-gradient(circle at 85% 18%, rgba(170,190,199,.28), transparent 31%),
+        radial-gradient(circle at 75% 82%, rgba(206,176,170,.25), transparent 32%),
+        radial-gradient(circle at 22% 75%, rgba(169,183,161,.27), transparent 33%),
+        linear-gradient(145deg, #f7f1e6 0%, #f2eadb 45%, #f8f2e8 100%);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "PingFang SC",
+        "Hiragino Sans GB",
+        "Microsoft YaHei",
+        sans-serif;
+      overflow-x: hidden;
+    }
 
-/* ============ 转场：开花 ============ */
-.transition{
-  position:fixed; inset:0; z-index:50; display:none; overflow:hidden;
-  background:
-    radial-gradient(120% 90% at 50% 30%, rgba(255,254,204,.5), transparent 55%),
-    radial-gradient(110% 100% at 50% 100%, rgba(240,240,200,.4), transparent 60%),
-    rgba(252,234,226,.9);
-  backdrop-filter:blur(4px);
-}
-.transition.play{ display:block; }
-.t-stem-svg{ position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:60px; height:64vh; }
-.t-stem-svg path{ stroke:var(--stem-3); stroke-width:2.4; stroke-dasharray:700; stroke-dashoffset:700; }
-.transition.play .t-stem-svg path{ animation:stemDraw .7s .1s var(--ease) forwards; }
-@keyframes stemDraw{ to{ stroke-dashoffset:0; } }
-.t-bloom{ position:absolute; left:50%; top:20%; transform:translate(-50%,-50%); }
-.t-bloom .petal{ opacity:0; }
-.transition.play .t-bloom .petal{ animation:bloomPetal .62s .62s var(--ease) forwards; }
-@keyframes bloomPetal{ 0%{ opacity:0; transform:scale(0);} 100%{ opacity:1; transform:scale(1);} }
-.t-bloom .bloom-core{ opacity:0; transform:scale(0); }
-.transition.play .t-bloom .bloom-core{ animation:bloomPetal .5s .9s var(--ease) forwards; }
-.t-petal{
-  position:absolute; border-radius:50%; filter:blur(3px); opacity:0; top:22%;
-}
-.transition.play .t-petal{ animation:petalFall 1s var(--ease) forwards; }
-@keyframes petalFall{
-  0%{ opacity:.9; transform:translate(0,0) rotate(0deg) scale(1);}
-  100%{ opacity:0; transform:translate(var(--dx,20px),62vh) rotate(var(--rot,180deg)) scale(.6);}
-}
-.t-caption{
-  position:absolute; left:50%; top:calc(20% + 110px); transform:translate(-50%,0);
-  font-size:15px; letter-spacing:.12em; color:var(--ink); opacity:0;
-}
-.transition.play .t-caption{ animation:fadeup .5s 1.02s var(--ease) forwards; }
+    /* Canvas grain.
+       Nearly invisible from afar,
+       discoverable up close. */
 
-/* ============ Toast ============ */
-.toast{
-  position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); z-index:80;
-  font-size:13.5px; letter-spacing:.05em; color:var(--ink); padding:11px 20px; border-radius:999px; opacity:0; pointer-events:none;
-  background:linear-gradient(145deg, rgba(255,255,255,.65), rgba(255,255,255,0) 50%), rgba(255,254,204,.9);
-  box-shadow:0 2px 3px var(--shadow-ink), 4px 6px 16px rgba(152,144,88,.3), -4px -5px 12px var(--light), inset 0 1px 0 rgba(255,255,255,.7);
-  transition:opacity .3s var(--ease), transform .3s var(--ease);
-}
-.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .13;
+      z-index: 1000;
 
-/* ============ mock 输出 ============ */
-.mock{ animation:fadeup .5s var(--ease); margin-top:20px; }
-.mock .mock-label{ font-size:13px; letter-spacing:.12em; color:var(--ink-soft); margin-bottom:4px; }
-.mock .mock-note{ font-size:12px; color:var(--ink-soft); opacity:.8; margin-bottom:16px; }
-.rpg-map{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:14px 0; }
-.rpg-node{
-  padding:12px 14px; border-radius:14px; font-size:13.5px; line-height:1.5;
-  background:linear-gradient(145deg, rgba(255,255,255,.5), rgba(255,255,255,0) 50%), rgba(240,240,200,.55);
-  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.14), -2px -3px 8px var(--light);
-}
-blockquote{ margin:14px 0; padding:12px 18px; border-left:3px solid var(--stem-3); font-size:14.5px; line-height:1.8; color:var(--ink); background:rgba(255,255,255,.25); border-radius:0 14px 14px 0; }
-.keep{ font-size:13px; color:var(--ink-soft); margin-top:10px; }
-.pipeline{ display:flex; flex-direction:column; gap:8px; margin:14px 0; }
-.pipe-step{ display:flex; align-items:center; gap:12px; font-size:14px; padding:10px 14px; border-radius:14px; background:rgba(255,255,255,.25); }
-.pipe-step .dot{ width:10px; height:10px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #FFFECC, var(--stem-3) 70%); box-shadow:0 0 0 3px rgba(144,168,104,.16); flex:0 0 auto; }
-.checklist{ display:flex; flex-direction:column; gap:2px; margin:12px 0; }
-.checklist label{ display:flex; align-items:center; gap:12px; font-size:14.5px; padding:9px 12px; border-radius:12px; cursor:pointer; transition:background .2s; }
-.checklist label:hover{ background:rgba(255,255,255,.3); }
-.checklist input{ width:18px; height:18px; accent-color:var(--stem-1); }
-.checklist .done{ text-decoration:line-through; color:var(--ink-soft); }
-.disclaimer{ margin-top:14px; font-size:12px; color:var(--danger-2); letter-spacing:.04em; }
-.anon-box{ display:flex; gap:20px; align-items:center; flex-wrap:wrap; margin:14px 0; }
-.anon-link{ font-size:15px; font-weight:600; letter-spacing:.03em; }
-.qr{ width:96px; height:96px; padding:8px; border-radius:14px; background:#FFFECC; box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.18); }
-.answer-card{ margin-top:14px; padding:14px 18px; border-radius:16px; background:linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,0) 50%), rgba(240,240,200,.6); box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.16); font-size:14px; line-height:1.7; }
-.chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-.chip{ font-size:12px; padding:5px 12px; border-radius:999px; background:rgba(255,255,255,.35); box-shadow:inset 0 0 0 1px rgba(152,144,88,.12); }
+      background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");
 
-@media (max-width:640px){
-  .brand .brand-sub{ display:none; }
-  .nav-links button{ padding:7px 10px; font-size:12.5px; }
-  .garden{ height:min(66vh,600px); }
-  .plant{ width:120px; }
-  .detail-head{ gap:12px; }
-}
-</style>
+      mix-blend-mode: multiply;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      width: 42vw;
+      height: 42vw;
+      left: -15vw;
+      top: 34vh;
+      background:
+        radial-gradient(circle, rgba(255,248,215,.34), transparent 68%);
+      pointer-events: none;
+      filter: blur(34px);
+      z-index: -1;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================================================
+       02. TYPOGRAPHY
+    ========================================================= */
+
+    .editorial {
+      font-family:
+        "Iowan Old Style",
+        "Songti SC",
+        "STSong",
+        Georgia,
+        serif;
+    }
+
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 14px;
+    }
+
+    .small-en {
+      display: block;
+      margin-top: 5px;
+      font-size: 10px;
+      line-height: 1.4;
+      letter-spacing: .055em;
+      color: var(--ink-faint);
+      font-weight: 450;
+    }
+
+    .muted {
+      color: var(--ink-soft);
+    }
+
+    /* =========================================================
+       03. APP SHELL
+    ========================================================= */
+
+    #app {
+      min-height: 100vh;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 36px));
+      margin: 0 auto;
+    }
+
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 76px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 30px;
+
+      backdrop-filter: blur(17px);
+      -webkit-backdrop-filter: blur(17px);
+
+      background:
+        linear-gradient(
+          to bottom,
+          rgba(248,243,233,.90),
+          rgba(248,243,233,.64)
+        );
+
+      border-bottom: 1px solid rgba(77,67,55,.07);
+    }
+
+    .nav-inner {
+      width: min(1180px, calc(100% - 36px));
+      margin: 0 auto;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .brand-cn {
+      font-family:
+        "Iowan Old Style",
+        "Songti SC",
+        serif;
+      font-size: 20px;
+      letter-spacing: .08em;
+    }
+
+    .brand-en {
+      display: block;
+      margin-top: 1px;
+      font-size: 8px;
+      letter-spacing: .21em;
+      color: var(--ink-faint);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-link {
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      padding: 9px 13px;
+      border-radius: 12px;
+      color: var(--ink-soft);
+      font-size: 13px;
+      transition: .2s var(--ease);
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--ink);
+      background: rgba(255,255,255,.27);
+    }
+
+    main {
+      min-height: calc(100vh - 76px);
+    }
+
+    /* =========================================================
+       04. TACTILE PHYSICS
+    ========================================================= */
+
+    .tactile {
+      position: relative;
+      isolation: isolate;
+
+      border: 1px solid rgba(103,90,69,.11);
+      border-radius: 15px;
+
+      background:
+        radial-gradient(
+          circle at 28% 14%,
+          rgba(255,255,255,.95),
+          transparent 42%
+        ),
+        linear-gradient(
+          145deg,
+          #fbf6e9,
+          #efe5cf
+        );
+
+      box-shadow: var(--shadow-button);
+
+      transform: translateY(0);
+      cursor: pointer;
+
+      transition:
+        transform .13s var(--ease),
+        box-shadow .16s var(--ease),
+        filter .16s var(--ease);
+    }
+
+    .tactile:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-button-hover);
+      filter: brightness(1.012);
+    }
+
+    .tactile:active,
+    .tactile.is-pressed {
+      transform: translateY(2px);
+
+      box-shadow:
+        0 1px 2px rgba(96,82,59,.08),
+        inset 0 3px 6px rgba(101,85,62,.14),
+        inset 0 -1px 2px rgba(255,255,255,.64);
+
+      filter: brightness(.99);
+    }
+
+    .tactile::before {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      pointer-events: none;
+
+      background:
+        linear-gradient(
+          160deg,
+          rgba(255,255,255,.32),
+          transparent 35%
+        );
+
+      opacity: .72;
+      mix-blend-mode: screen;
+      z-index: -1;
+    }
+
+    .release-glow::after {
+      content: "";
+      position: absolute;
+      inset: -9px;
+      border-radius: inherit;
+      z-index: -2;
+      pointer-events: none;
+
+      border: 1px solid rgba(239,214,153,.38);
+
+      animation: releaseGlow .48s ease-out forwards;
+    }
+
+    @keyframes releaseGlow {
+      0% {
+        opacity: .7;
+        transform: scale(.96);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scale(1.08);
+      }
+    }
+
+    .btn {
+      min-height: 48px;
+      padding: 12px 19px;
+      border-radius: 15px;
+      font-weight: 620;
+      letter-spacing: .01em;
+    }
+
+    .btn-primary {
+      min-height: 52px;
+      padding-inline: 22px;
+    }
+
+    .btn-secondary {
+      min-height: 42px;
+      padding: 9px 14px;
+      font-size: 13px;
+
+      box-shadow:
+        0 5px 10px rgba(99,86,64,.08),
+        0 1px 2px rgba(99,86,64,.08),
+        inset 0 1px 0 rgba(255,255,255,.78);
+    }
+
+    .text-action {
+      border: 0;
+      background: none;
+      padding: 0;
+
+      color: var(--ink-soft);
+      cursor: pointer;
+
+      text-decoration-line: underline;
+      text-decoration-color: rgba(69,61,53,.25);
+      text-underline-offset: 5px;
+
+      transition:
+        color .18s ease,
+        transform .18s ease;
+    }
+
+    .text-action:hover {
+      color: var(--ink);
+      transform: translateX(2px);
+    }
+
+    /* Input receives */
+
+    .inset-field {
+      width: 100%;
+      border: 1px solid rgba(97,81,62,.09);
+      outline: none;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(238,229,211,.65),
+          rgba(250,246,237,.74)
+        );
+
+      box-shadow: var(--shadow-inset);
+
+      transition:
+        box-shadow .2s ease,
+        background .2s ease;
+    }
+
+    .inset-field:focus {
+      background:
+        linear-gradient(
+          145deg,
+          rgba(251,247,235,.9),
+          rgba(241,233,214,.62)
+        );
+
+      box-shadow:
+        inset 0 2px 6px rgba(103,87,64,.08),
+        inset 0 0 24px rgba(255,250,228,.56),
+        0 0 0 3px rgba(230,213,167,.13);
+    }
+
+    /* =========================================================
+       05. HOME
+    ========================================================= */
+
+    .home {
+      position: relative;
+      min-height: calc(100vh - 76px);
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 72px 0 84px;
+    }
+
+    .home-inner {
+      position: relative;
+      width: min(820px, 100%);
+      text-align: center;
+      z-index: 5;
+    }
+
+    .home-mark {
+      margin-bottom: 25px;
+      color: var(--ink-faint);
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      max-width: 720px;
+      margin: 0 auto 18px;
+
+      font-family:
+        "Iowan Old Style",
+        "Songti SC",
+        "STSong",
+        Georgia,
+        serif;
+
+      font-size: clamp(40px, 7vw, 72px);
+      line-height: 1.08;
+      letter-spacing: -.035em;
+      font-weight: 500;
+    }
+
+    .hero-description {
+      max-width: 550px;
+      margin: 0 auto 35px;
+
+      color: var(--ink-soft);
+      font-size: 15px;
+      line-height: 1.85;
+    }
+
+    .need-box {
+      position: relative;
+      width: min(690px, 100%);
+      margin: auto;
+
+      border-radius: 27px;
+      padding: 8px;
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(239,230,211,.62),
+          rgba(252,248,239,.72)
+        );
+
+      box-shadow:
+        inset 0 4px 13px rgba(95,79,57,.11),
+        inset 0 -2px 3px rgba(255,255,255,.85),
+        0 20px 48px rgba(110,91,62,.055);
+    }
+
+    .need-input {
+      display: block;
+      width: 100%;
+      min-height: 132px;
+
+      border: 0;
+      outline: 0;
+
+      resize: none;
+
+      padding:
+        24px
+        24px
+        66px;
+
+      border-radius: 21px;
+
+      background:
+        rgba(248,244,235,.42);
+
+      color: var(--ink);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    .need-input::placeholder {
+      color: rgba(70,62,54,.38);
+    }
+
+    .need-submit {
+      position: absolute;
+      right: 17px;
+      bottom: 17px;
+    }
+
+    .need-submit .small-en {
+      display: inline;
+      margin-left: 6px;
+    }
+
+    .floating-needs {
+      width: min(850px, 100%);
+      margin: 27px auto 0;
+
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px 12px;
+    }
+
+    .need-chip {
+      border: 1px solid rgba(79,69,58,.09);
+      background: rgba(251,247,238,.45);
+      color: var(--ink-soft);
+
+      padding: 9px 12px;
+      border-radius: 999px;
+
+      cursor: pointer;
+      font-size: 12px;
+
+      backdrop-filter: blur(8px);
+
+      transition:
+        transform .3s var(--ease),
+        background .3s ease,
+        box-shadow .3s ease;
+    }
+
+    .need-chip:hover {
+      transform: translateY(-2px);
+      background: rgba(255,251,242,.67);
+      box-shadow: 0 8px 18px rgba(100,84,61,.06);
+    }
+
+    .need-chip:nth-child(2n) {
+      animation: driftA 8s ease-in-out infinite alternate;
+    }
+
+    .need-chip:nth-child(2n+1) {
+      animation: driftB 10s ease-in-out infinite alternate;
+    }
+
+    @keyframes driftA {
+      from { transform: translateY(0); }
+      to { transform: translateY(-3px); }
+    }
+
+    @keyframes driftB {
+      from { transform: translateY(1px); }
+      to { transform: translateY(-2px); }
+    }
+
+    .home-footnote {
+      margin-top: 23px;
+      font-size: 11px;
+      color: var(--ink-faint);
+    }
+
+    /* =========================================================
+       06. PAGE
+    ========================================================= */
+
+    .page {
+      padding: 72px 0 100px;
+      animation: pageIn .36s ease both;
+    }
+
+    @keyframes pageIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .page-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 30px;
+
+      margin-bottom: 48px;
+    }
+
+    .page-head h1 {
+      margin-bottom: 9px;
+      font-size: clamp(36px, 5vw, 57px);
+      line-height: 1.04;
+      font-weight: 500;
+      letter-spacing: -.035em;
+    }
+
+    .page-head p {
+      max-width: 560px;
+      margin-bottom: 0;
+      color: var(--ink-soft);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    /* =========================================================
+       07. BRANCH CONSTELLATION / GALLERY
+    ========================================================= */
+
+    .branch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .branch-node {
+      position: relative;
+      min-height: 235px;
+      overflow: hidden;
+
+      padding: 25px;
+
+      border: 1px solid rgba(76,66,54,.08);
+      border-radius: 22px;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(251,247,239,.48),
+          rgba(243,235,220,.35)
+        );
+
+      cursor: pointer;
+
+      transition:
+        transform .32s var(--ease),
+        box-shadow .32s var(--ease),
+        background .32s ease;
+    }
+
+    .branch-node::after {
+      content: "";
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      right: -40px;
+      bottom: -50px;
+      border-radius: 50%;
+
+      background: var(--wash, rgba(234,220,175,.27));
+      filter: blur(24px);
+      opacity: .6;
+    }
+
+    .branch-node:hover {
+      transform: translateY(-5px);
+
+      box-shadow:
+        0 18px 35px rgba(105,88,61,.07),
+        inset 0 1px 0 rgba(255,255,255,.54);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(255,251,243,.64),
+          rgba(243,235,220,.38)
+        );
+    }
+
+    .branch-node:active {
+      transform: translateY(-1px);
+
+      box-shadow:
+        0 5px 12px rgba(105,88,61,.05),
+        inset 0 2px 5px rgba(99,83,60,.07);
+    }
+
+    .branch-kind {
+      display: inline-flex;
+      margin-bottom: 30px;
+      font-size: 10px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+    }
+
+    .branch-name {
+      position: relative;
+      z-index: 2;
+
+      max-width: 300px;
+
+      font-family:
+        "Iowan Old Style",
+        "Songti SC",
+        Georgia,
+        serif;
+
+      font-size: 25px;
+      line-height: 1.14;
+      font-weight: 500;
+      margin-bottom: 14px;
+    }
+
+    .branch-problem {
+      position: relative;
+      z-index: 2;
+
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .branch-arrow {
+      position: absolute;
+      right: 22px;
+      top: 22px;
+
+      font-size: 18px;
+      color: var(--ink-faint);
+
+      transition: transform .3s var(--ease);
+    }
+
+    .branch-node:hover .branch-arrow {
+      transform: translate(3px,-2px);
+    }
+
+    /* =========================================================
+       08. MATCHING
+    ========================================================= */
+
+    .matching {
+      min-height: calc(100vh - 76px);
+      display: grid;
+      place-items: center;
+      padding: 50px 0;
+    }
+
+    .matching-card {
+      width: min(620px, 100%);
+      text-align: center;
+    }
+
+    .matching-orbit {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 28px;
+      position: relative;
+    }
+
+    .matching-orbit::before,
+    .matching-orbit::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+    }
+
+    .matching-orbit::before {
+      inset: 25px;
+      background: rgba(233,218,171,.5);
+      box-shadow:
+        0 0 40px rgba(233,218,171,.35);
+    }
+
+    .matching-orbit::after {
+      inset: 6px;
+      border: 1px solid rgba(88,77,61,.12);
+      animation: quietRotate 2.6s linear infinite;
+      border-top-color: rgba(88,77,61,.44);
+    }
+
+    @keyframes quietRotate {
+      to { transform: rotate(360deg); }
+    }
+
+    /* =========================================================
+       09. BRANCH DETAIL
+    ========================================================= */
+
+    .detail-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+      gap: 56px;
+      align-items: start;
+    }
+
+    .back {
+      margin-bottom: 35px;
+    }
+
+    .detail-kind {
+      margin-bottom: 18px;
+    }
+
+    .detail-title {
+      max-width: 690px;
+      margin-bottom: 20px;
+
+      font-family:
+        "Iowan Old Style",
+        "Songti SC",
+        Georgia,
+        serif;
+
+      font-size: clamp(42px, 6vw, 70px);
+      line-height: .98;
+      letter-spacing: -.045em;
+      font-weight: 500;
+    }
+
+    .detail-problem {
+      max-width: 620px;
+      margin-bottom: 37px;
+
+      font-size: 17px;
+      color: var(--ink-soft);
+      line-height: 1.85;
+    }
+
+    .source-note {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+
+      padding: 8px 10px;
+      margin-bottom: 34px;
+
+      border-bottom: 1px solid rgba(78,67,55,.12);
+
+      font-size: 11px;
+      color: var(--ink-faint);
+    }
+
+    .use-panel {
+      position: sticky;
+      top: 105px;
+
+      padding: 25px;
+      border-radius: 25px;
+
+      border: 1px solid rgba(78,67,55,.08);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(247,241,228,.59),
+          rgba(253,249,240,.5)
+        );
+
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.47),
+        0 18px 44px rgba(102,86,62,.05);
+    }
+
+    .panel-label {
+      margin-bottom: 18px;
+      font-size: 11px;
+      color: var(--ink-faint);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .field-group {
+      margin-bottom: 16px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+
+    .field {
+      width: 100%;
+      min-height: 44px;
+      padding: 11px 13px;
+      border-radius: 12px;
+      color: var(--ink);
+    }
+
+    textarea.field {
+      min-height: 92px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .use-actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 23px;
+    }
+
+    .use-actions .btn {
+      width: 100%;
+    }
+
+    .detail-section {
+      border-top: 1px solid var(--line);
+      padding-top: 29px;
+      margin-top: 38px;
+    }
+
+    .detail-section h3 {
+      margin-bottom: 13px;
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    .detail-section p {
+      color: var(--ink-soft);
+      line-height: 1.8;
+      font-size: 13px;
+    }
+
+    .mock-output {
+      margin-top: 20px;
+
+      padding: 25px;
+
+      border-radius: 18px;
+
+      border: 1px solid rgba(79,68,55,.09);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(252,249,241,.65),
+          rgba(241,233,218,.45)
+        );
+
+      animation: outputIn .4s var(--ease);
+    }
+
+    @keyframes outputIn {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .output-title {
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--ink-faint);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .output-body {
+      color: var(--ink);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .output-body ul {
+      padding-left: 19px;
+    }
+
+    .output-body li {
+      margin-bottom: 8px;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(81,70,57,.11);
+    }
+
+    .check-row input {
+      accent-color: #8f9c83;
+    }
+
+    .adaptation {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+
+    /* =========================================================
+       10. GROW
+    ========================================================= */
+
+    .grow {
+      min-height: calc(100vh - 76px);
+      display: grid;
+      place-items: center;
+      padding: 70px 0;
+    }
+
+    .grow-card {
+      width: min(620px, 100%);
+      text-align: center;
+    }
+
+    .seed {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 27px;
+
+      border-radius: 50%;
+
+      background:
+        radial-gradient(
+          circle at 37% 28%,
+          #fff9e8,
+          #e6d9ae 58%,
+          #caba8c
+        );
+
+      box-shadow:
+        0 12px 28px rgba(115,96,62,.15),
+        inset 0 2px 2px rgba(255,255,255,.7);
+    }
+
+    .grow-title {
+      margin-bottom: 13px;
+      font-family:
+        "Iowan Old Style",
+        "Songti SC",
+        serif;
+      font-size: 42px;
+      font-weight: 500;
+      letter-spacing: -.035em;
+    }
+
+    .grow-copy {
+      max-width: 520px;
+      margin: 0 auto 28px;
+      color: var(--ink-soft);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .grow-need {
+      margin: 0 auto 28px;
+      padding: 18px 20px;
+      max-width: 520px;
+
+      border-radius: 16px;
+
+      background: rgba(248,243,233,.52);
+      border: 1px solid rgba(80,69,55,.08);
+
+      color: var(--ink);
+      font-family:
+        "Iowan Old Style",
+        "Songti SC",
+        serif;
+      font-size: 18px;
+    }
+
+    /* =========================================================
+       11. MINE
+    ========================================================= */
+
+    .mine-grid {
+      display: grid;
+      grid-template-columns: 190px minmax(0,1fr);
+      gap: 40px;
+      align-items: start;
+    }
+
+    .mine-tabs {
+      position: sticky;
+      top: 105px;
+
+      display: grid;
+      gap: 5px;
+    }
+
+    .mine-tab {
+      text-align: left;
+      border: 0;
+      background: transparent;
+
+      padding: 11px 12px;
+
+      border-radius: 11px;
+
+      cursor: pointer;
+      color: var(--ink-soft);
+
+      transition: .2s ease;
+    }
+
+    .mine-tab:hover,
+    .mine-tab.active {
+      color: var(--ink);
+      background: rgba(255,255,255,.32);
+    }
+
+    .mine-content {
+      min-width: 0;
+    }
+
+    .saved-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+    }
+
+    .saved-item {
+      padding: 20px;
+      border-radius: 17px;
+
+      border: 1px solid rgba(78,67,54,.08);
+
+      background: rgba(250,246,237,.4);
+    }
+
+    .saved-item h3 {
+      margin-bottom: 9px;
+      font-size: 17px;
+    }
+
+    .saved-item p {
+      margin-bottom: 14px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .empty-state {
+      padding: 55px 20px;
+      text-align: center;
+
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+
+      color: var(--ink-soft);
+    }
+
+    .record {
+      padding: 17px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .record-time {
+      margin-top: 7px;
+      font-size: 10px;
+      color: var(--ink-faint);
+    }
+
+    .settings-card {
+      max-width: 640px;
+      padding: 25px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .settings-note {
+      margin-top: 16px;
+      color: var(--ink-faint);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    /* =========================================================
+       12. TOAST
+    ========================================================= */
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 27px;
+      z-index: 10000;
+
+      transform: translate(-50%, 20px);
+
+      padding: 12px 17px;
+      border-radius: 15px;
+
+      color: var(--ink);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(253,249,238,.96),
+          rgba(238,227,205,.95)
+        );
+
+      border: 1px solid rgba(77,65,51,.09);
+
+      box-shadow:
+        0 14px 32px rgba(89,74,52,.13),
+        inset 0 1px rgba(255,255,255,.8);
+
+      opacity: 0;
+      pointer-events: none;
+
+      transition:
+        opacity .25s ease,
+        transform .25s var(--ease);
+
+      font-size: 13px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    /* =========================================================
+       13. MOBILE
+    ========================================================= */
+
+    @media (max-width: 880px) {
+      .branch-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .detail-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .use-panel {
+        position: static;
+      }
+
+      .mine-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mine-tabs {
+        position: static;
+        display: flex;
+        overflow-x: auto;
+        padding-bottom: 7px;
+      }
+
+      .mine-tab {
+        white-space: nowrap;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .navbar {
+        height: 68px;
+      }
+
+      .nav-inner {
+        width: min(100% - 24px, 1180px);
+      }
+
+      .brand-cn {
+        font-size: 17px;
+      }
+
+      .nav-link {
+        padding: 8px 7px;
+        font-size: 11px;
+      }
+
+      .nav-link .desktop-en {
+        display: none;
+      }
+
+      .shell {
+        width: calc(100% - 28px);
+      }
+
+      .home {
+        min-height: calc(100vh - 68px);
+        padding: 52px 0 72px;
+      }
+
+      .hero-title {
+        font-size: 43px;
+      }
+
+      .hero-description {
+        font-size: 14px;
+      }
+
+      .need-input {
+        min-height: 155px;
+        font-size: 15px;
+      }
+
+      .need-submit {
+        left: 16px;
+        right: 16px;
+      }
+
+      .need-submit .btn {
+        width: 100%;
+      }
+
+      .branch-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .branch-node {
+        min-height: 205px;
+      }
+
+      .page {
+        padding-top: 45px;
+      }
+
+      .page-head {
+        display: block;
+      }
+
+      .detail-title {
+        font-size: 45px;
+      }
+
+      .saved-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .floating-needs {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <div class="canvas-bg"></div>
-  <div class="canvas-grain"></div>
-  <div class="edge-strokes"><i></i><i></i><i></i><i></i></div>
+  <div id="app"></div>
+  <div id="toast" class="toast"></div>
 
-  <nav>
-    <div class="brand" onclick="go('opening')">
-      <span class="logo text-emboss">枝间 ZHIJIAN</span>
-      <span class="brand-sub">Branches</span>
-    </div>
-    <div class="nav-links">
-      <button data-nav="opening" class="active" onclick="go('opening')">首页</button>
-      <button data-nav="branches" onclick="go('branches')">BRANCHES</button>
-      <button data-nav="my" onclick="go('my')">我的枝间</button>
-    </div>
-  </nav>
+  <script>
+    /* =========================================================
+       BRANCHES MVP
+       No framework.
+       No install.
+       localStorage persistence.
+    ========================================================= */
 
-  <main>
-    <!-- ============ 首页 / Opening ============ -->
-    <section id="view-opening" class="view active">
-      <div class="container opening">
-        <h1 class="slogan text-emboss">看见你的需求</h1>
-        <p class="slogan-sub">造好的 Branch，在这里被看见、被找到、被使用、被领养。</p>
+    const STORAGE = {
+      saved: "branches.saved",
+      seeds: "branches.seeds",
+      adaptations: "branches.adaptations",
+      memories: "branches.memories",
+      settings: "branches.settings"
+    };
 
-        <div class="opening-flower" id="opening-flower"></div>
+    const branches = [
+      {
+        slug: "teach-me-like-this",
+        type: "Knowledge Branch",
+        typeZh: "知识枝",
+        name: "Teach Me Like This",
+        problem: "我有一篇必须读、但完全看不进去的论文。",
+        keywords: [
+          "论文", "文章", "阅读", "看不懂", "理解",
+          "解释", "学习", "paper", "文献", "知识"
+        ],
+        color: "rgba(170,190,199,.34)"
+      },
 
-        <div class="want-bar">
-          <input id="dont-input" class="inset-relief" type="text" placeholder="不想要什么（可选）：例如别太正式、不要代码…" />
-          <button class="btn btn-primary" id="bloom-btn" onclick="submitNeed()">让枝间开花 →</button>
-        </div>
-        <p class="hint">枝间不生成 App、不修改 App —— 它只负责把造好的 Branch 匹配给需要它的人。</p>
-      </div>
-    </section>
+      {
+        slug: "training-branch",
+        type: "Persona Branch",
+        typeZh: "人格枝",
+        name: "XXX’s Training Branch",
+        problem: "我信任一个健身博主，但今天状态特殊，想按 TA 的判断体系得到建议。",
+        keywords: [
+          "健身", "训练", "运动", "酸痛", "睡眠",
+          "器械", "减脂", "增肌", "身体", "周期"
+        ],
+        color: "rgba(169,183,161,.35)"
+      },
 
-    <!-- ============ BRANCHES 花园 ============ -->
-    <section id="view-branches" class="view">
-      <div class="container">
-        <div class="garden-head">
-          <h1 class="text-emboss">花园 · BRANCHES</h1>
-          <p>每一朵花，都是一个被造好的 Branch。轻触，领养它。</p>
-        </div>
-        <div class="garden" id="garden"></div>
-      </div>
-    </section>
+      {
+        slug: "less-ai-more-me",
+        type: "Skill Branch",
+        typeZh: "能力枝",
+        name: "Less AI. More Me.",
+        problem: "AI 写完东西，但充满 AI 味。",
+        keywords: [
+          "ai味", "ai 味", "不像人", "润色", "改写",
+          "自然", "文案", "写作", "口吻", "机械"
+        ],
+        color: "rgba(206,176,170,.36)"
+      },
 
-    <!-- ============ Branch Detail ============ -->
-    <section id="view-detail" class="view">
-      <div class="container">
-        <button class="btn btn-ghost back-link" onclick="go('branches')">← 回到花园</button>
-        <div class="detail-head">
-          <div class="flower-mini" id="detail-flower"></div>
-          <div class="meta">
-            <div class="branch-tag-text" id="detail-tag"></div>
-            <h1 class="text-emboss" id="detail-name"></h1>
-            <p class="detail-problem" id="detail-problem"></p>
+      {
+        slug: "morning-trend-radar",
+        type: "Workflow Branch",
+        typeZh: "工作流枝",
+        name: "Morning Trend Radar",
+        problem: "团队每天要人工追踪行业热点。",
+        keywords: [
+          "热点", "趋势", "行业", "追踪", "监测",
+          "推送", "每天", "新闻", "信息", "团队"
+        ],
+        color: "rgba(234,220,175,.43)"
+      },
+
+      {
+        slug: "what-do-i-need-today",
+        type: "App Branch",
+        typeZh: "应用枝",
+        name: "What Do I Need Today?",
+        problem: "每次出门都担心忘东西。",
+        keywords: [
+          "出门", "行李", "忘东西", "旅行", "会议",
+          "清单", "带什么", "收拾", "准备", "check"
+        ],
+        color: "rgba(174,194,182,.34)"
+      },
+
+      {
+        slug: "friends-anon-question-box",
+        type: "Link Branch",
+        typeZh: "链接枝",
+        name: "Friends’ Anonymous Question Box",
+        problem: "朋友之间想玩匿名提问、夸夸、爆料或整活，但普通问卷太正经。",
+        keywords: [
+          "匿名", "提问箱", "朋友", "群聊", "真心话",
+          "爆料", "夸夸", "整活", "问卷", "匿名提问"
+        ],
+        color: "rgba(201,177,200,.29)"
+      }
+    ];
+
+    const floatingNeeds = [
+      "这篇论文我真的看不进去",
+      "AI 写得太像 AI 了",
+      "今天到底该不该训练？",
+      "每天追热点好累",
+      "出门总觉得忘了什么",
+      "想和朋友玩匿名提问",
+      "有没有更适合我的版本？"
+    ];
+
+    const state = {
+      view: "home",
+      currentSlug: null,
+      lastNeed: "",
+      mineTab: "saved"
+    };
+
+    const app = document.querySelector("#app");
+    const toast = document.querySelector("#toast");
+
+    /* =========================================================
+       STORAGE
+    ========================================================= */
+
+    function read(key, fallback = []) {
+      try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function write(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function settings() {
+      return {
+        model: "deepseek-v4-flash",
+        apiBase: "",
+        apiKey: "",
+        ...read(STORAGE.settings, {})
+      };
+    }
+
+    /* =========================================================
+       UTILITIES
+    ========================================================= */
+
+    function escapeHTML(value = "") {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function nowLabel() {
+      return new Date().toLocaleString("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function getBranch(slug) {
+      return branches.find(branch => branch.slug === slug);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+
+      clearTimeout(showToast.timer);
+
+      showToast.timer = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2300);
+    }
+
+    function go(view, slug = null) {
+      state.view = view;
+      state.currentSlug = slug;
+
+      if (view === "branch" && slug) {
+        location.hash = `branch/${slug}`;
+      } else {
+        location.hash = view;
+      }
+
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    /* =========================================================
+       NAVBAR
+    ========================================================= */
+
+    function navbar() {
+      const active =
+        state.view === "branch" ? "branches" : state.view;
+
+      return `
+        <header class="navbar">
+          <div class="nav-inner">
+
+            <button
+              class="brand"
+              onclick="go('home')"
+              aria-label="回到枝间首页"
+            >
+              <span class="brand-cn">枝间</span>
+              <span class="brand-en">BRANCHES</span>
+            </button>
+
+            <nav class="nav-links">
+              <button
+                class="nav-link ${active === "home" ? "active" : ""}"
+                onclick="go('home')"
+              >
+                首页
+              </button>
+
+              <button
+                class="nav-link ${active === "branches" ? "active" : ""}"
+                onclick="go('branches')"
+              >
+                BRANCHES
+              </button>
+
+              <button
+                class="nav-link ${active === "mine" ? "active" : ""}"
+                onclick="go('mine')"
+              >
+                我的枝间
+              </button>
+            </nav>
+
           </div>
-        </div>
-        <div class="surface detail-surface">
-          <h3>INPUTS · 告诉我你的情况</h3>
-          <form id="detail-form" onsubmit="runBranch(event)">
-            <div id="detail-inputs"></div>
-            <button class="btn btn-primary" type="submit" id="run-btn">运行 Branch</button>
-          </form>
-          <div id="detail-output"></div>
-          <div class="berry-path"><div class="berry" id="berry"></div></div>
-        </div>
-        <div class="detail-actions">
-          <button class="btn btn-secondary" onclick="openAdapt()">Request adaptation · 哪里不适合我</button>
-          <button class="btn btn-secondary" onclick="openGrow()">Grow the first one · 提交新需求</button>
-        </div>
-      </div>
-    </section>
+        </header>
+      `;
+    }
 
-    <!-- ============ 我的枝间 ============ -->
-    <section id="view-my" class="view">
-      <div class="container">
-        <div class="garden-head" style="padding-top:0;">
-          <h1 class="text-emboss">我的枝间</h1>
-          <p>设置 · 记忆 · 登录</p>
-        </div>
-        <div class="my-tabs">
-          <button class="btn btn-secondary active" data-tab="settings" onclick="switchTab('settings')">设置</button>
-          <button class="btn btn-secondary" data-tab="memory" onclick="switchTab('memory')">记忆</button>
-          <button class="btn btn-secondary" data-tab="login" onclick="switchTab('login')">登录</button>
-        </div>
+    /* =========================================================
+       HOME
+    ========================================================= */
 
-        <div class="my-panel active" id="panel-settings">
-          <div class="surface settings-card">
-            <div class="note">
-              枝间使用你在下方选择的模型来理解需求并匹配 Branch。未配置 API Key 时，将使用<b>本地关键词匹配</b>，仍可点开即用。
+    function homeView() {
+      return `
+        ${navbar()}
+
+        <main class="home">
+          <div class="shell">
+
+            <section class="home-inner">
+
+              <div class="home-mark">
+                ZHIJIAN · BRANCHES
+              </div>
+
+              <h1 class="hero-title">
+                看见你的需求，<br>
+                多小都值得被看见。
+              </h1>
+
+              <p class="hero-description">
+                说说最近哪里有一点不顺。
+                枝间会理解你的需求，并带你找到已经生长出来、
+                可以直接使用的 Branch。
+                <span class="small-en">
+                  Tell us what feels slightly off.
+                  Find something already grown for it.
+                </span>
+              </p>
+
+              <form
+                class="need-box"
+                onsubmit="submitNeed(event)"
+              >
+                <textarea
+                  id="needInput"
+                  class="need-input"
+                  maxlength="500"
+                  placeholder="最近，有什么小事让你觉得不太顺？"
+                  aria-label="描述你的需求"
+                ></textarea>
+
+                <div class="need-submit">
+                  <button class="btn btn-primary tactile" type="submit">
+                    说说看 →
+                    <span class="small-en">
+                      Find my Branch
+                    </span>
+                  </button>
+                </div>
+              </form>
+
+              <div class="floating-needs">
+                ${floatingNeeds.map(text => `
+                  <button
+                    class="need-chip"
+                    onclick="fillNeed('${escapeHTML(text)}')"
+                  >
+                    ${escapeHTML(text)}
+                  </button>
+                `).join("")}
+              </div>
+
+              <div class="home-footnote">
+                不需要懂 AI，也不需要先知道自己需要什么工具。
+                <span class="small-en">
+                  No installation. No registration. Start with the need.
+                </span>
+              </div>
+
+            </section>
+
+          </div>
+        </main>
+      `;
+    }
+
+    function fillNeed(text) {
+      const input = document.querySelector("#needInput");
+      input.value = text;
+      input.focus();
+    }
+
+    /* =========================================================
+       MATCH
+    ========================================================= */
+
+    function matchNeed(text) {
+      const normalized = text.toLowerCase();
+
+      let best = null;
+      let bestScore = 0;
+
+      branches.forEach(branch => {
+        let score = 0;
+
+        branch.keywords.forEach(keyword => {
+          if (normalized.includes(keyword.toLowerCase())) {
+            score += keyword.length >= 3 ? 2 : 1;
+          }
+        });
+
+        if (score > bestScore) {
+          best = branch;
+          bestScore = score;
+        }
+      });
+
+      return bestScore >= 2 ? best : null;
+    }
+
+    function rememberNeed(text) {
+      const memories = read(STORAGE.memories);
+
+      memories.unshift({
+        text,
+        time: nowLabel()
+      });
+
+      write(
+        STORAGE.memories,
+        memories.slice(0, 30)
+      );
+    }
+
+    function submitNeed(event) {
+      event.preventDefault();
+
+      const input = document.querySelector("#needInput");
+      const need = input.value.trim();
+
+      if (!need) {
+        showToast("先说说发生了什么。");
+        input.focus();
+        return;
+      }
+
+      state.lastNeed = need;
+      rememberNeed(need);
+
+      state.view = "matching";
+      render();
+
+      const branch = matchNeed(need);
+
+      setTimeout(() => {
+        if (branch) {
+          go("branch", branch.slug);
+        } else {
+          state.view = "grow";
+          location.hash = "grow";
+          render();
+        }
+      }, 720);
+    }
+
+    function matchingView() {
+      return `
+        ${navbar()}
+
+        <main class="matching">
+          <div class="shell">
+
+            <section class="matching-card">
+
+              <div class="matching-orbit"></div>
+
+              <div class="eyebrow">
+                正在寻找与你最靠近的 Branch
+              </div>
+
+              <h1 class="editorial">
+                先理解需求，<br>
+                再找东西。
+              </h1>
+
+              <p class="muted">
+                “${escapeHTML(state.lastNeed)}”
+              </p>
+
+              <span class="small-en">
+                Understanding the need before choosing the interface.
+              </span>
+
+            </section>
+
+          </div>
+        </main>
+      `;
+    }
+
+    /* =========================================================
+       BRANCHES
+    ========================================================= */
+
+    function branchesView() {
+      return `
+        ${navbar()}
+
+        <main class="page">
+          <div class="shell">
+
+            <div class="page-head">
+
+              <div>
+                <div class="eyebrow">
+                  BRANCHES
+                </div>
+
+                <h1 class="editorial">
+                  已经长出来的东西。
+                </h1>
+
+                <p>
+                  Branch 可以是一套知识、一个人的判断体系、
+                  一项能力、一条工作流、一个小应用，
+                  或者一个可以直接打开的链接。
+                  <span class="small-en">
+                    Different forms. Same principle:
+                    born from a real need.
+                  </span>
+                </p>
+              </div>
+
             </div>
-            <div class="field">
-              <label>服务商</label>
-              <select id="set-provider">
-                <option value="deepseek">DeepSeek V4 Flash（默认）</option>
-                <option value="openai">OpenAI 兼容</option>
-                <option value="custom">自定义</option>
+
+            <section class="branch-grid">
+
+              ${branches.map(branch => `
+                <article
+                  class="branch-node"
+                  style="--wash:${branch.color}"
+                  onclick="go('branch','${branch.slug}')"
+                >
+
+                  <span class="branch-arrow">↗</span>
+
+                  <div class="branch-kind">
+                    ${branch.typeZh} · ${branch.type}
+                  </div>
+
+                  <h2 class="branch-name">
+                    ${escapeHTML(branch.name)}
+                  </h2>
+
+                  <p class="branch-problem">
+                    ${escapeHTML(branch.problem)}
+                  </p>
+
+                </article>
+              `).join("")}
+
+            </section>
+
+          </div>
+        </main>
+      `;
+    }
+
+    /* =========================================================
+       BRANCH INPUT FORMS
+    ========================================================= */
+
+    function branchForm(branch) {
+      switch (branch.slug) {
+
+        case "teach-me-like-this":
+          return `
+            <div class="field-group">
+              <label class="field-label">
+                粘贴你看不进去的内容
+              </label>
+
+              <textarea
+                name="content"
+                class="field inset-field"
+                placeholder="把论文片段粘贴到这里……"
+              ></textarea>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">
+                你想怎么理解它？
+              </label>
+
+              <select
+                name="style"
+                class="field inset-field"
+              >
+                <option>温迪口吻 + RPG 世界地图</option>
+                <option>朋友聊天式解释</option>
+                <option>考试重点模式</option>
+                <option>比喻优先模式</option>
               </select>
             </div>
-            <div class="field">
-              <label>Base URL</label>
-              <input id="set-base" type="text" placeholder="https://api.deepseek.com/v1" />
+          `;
+
+        case "training-branch":
+          return `
+            ${simpleInput("sleep", "昨晚睡了多久？", "例如：6.5 小时")}
+            ${simpleInput("soreness", "现在酸痛程度", "例如：腿 6/10")}
+            ${simpleInput("time", "今天可用时间", "例如：35 分钟")}
+            ${simpleInput("equipment", "今天有什么器械？", "例如：哑铃 + 瑜伽垫")}
+          `;
+
+        case "less-ai-more-me":
+          return `
+            <div class="field-group">
+              <label class="field-label">
+                粘贴需要去掉 AI 味的文字
+              </label>
+
+              <textarea
+                name="text"
+                class="field inset-field"
+                placeholder="把那段有点像机器写的文字放进来……"
+              ></textarea>
             </div>
-            <div class="field">
-              <label>模型</label>
-              <input id="set-model" type="text" placeholder="deepseek-chat" />
+          `;
+
+        case "morning-trend-radar":
+          return `
+            ${simpleInput("field", "关注什么领域？", "例如：AI Agent")}
+            ${simpleInput("time", "什么时候推送？", "例如：每天 9:00")}
+            ${simpleInput("destination", "推到哪里？", "例如：团队文档")}
+          `;
+
+        case "what-do-i-need-today":
+          return `
+            <div class="field-group">
+              <label class="field-label">
+                今天是什么场景？
+              </label>
+
+              <select
+                name="scene"
+                class="field inset-field"
+              >
+                <option>日常出门</option>
+                <option>旅行</option>
+                <option>开会 / 活动</option>
+                <option>上课</option>
+                <option>过夜</option>
+              </select>
             </div>
-            <div class="field">
-              <label>API Key（可选）</label>
-              <input id="set-key" type="password" placeholder="sk-…" autocomplete="off" />
+
+            ${simpleInput("destination", "去哪儿？", "例如：学校")}
+            ${simpleInput("activity", "会做什么？", "例如：上课 + 图书馆")}
+          `;
+
+        case "friends-anon-question-box":
+          return `
+            <div class="field-group">
+              <label class="field-label">
+                玩法
+              </label>
+
+              <select
+                name="mode"
+                class="field inset-field"
+              >
+                <option>真心话</option>
+                <option>夸夸</option>
+                <option>回忆杀</option>
+                <option>整活</option>
+              </select>
             </div>
-            <div class="row" style="display:flex;justify-content:flex-end;gap:10px;">
-              <button class="btn btn-secondary" onclick="loadSettings()">重置默认</button>
-              <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+
+            <div class="field-group">
+              <label class="field-label">
+                开放对象
+              </label>
+
+              <select
+                name="audience"
+                class="field inset-field"
+              >
+                <option>好友</option>
+                <option>群聊</option>
+                <option>二维码</option>
+              </select>
             </div>
+
+            ${simpleInput("code", "群暗号", "例如：今晚别装")}
+          `;
+      }
+    }
+
+    function simpleInput(name, label, placeholder) {
+      return `
+        <div class="field-group">
+
+          <label class="field-label">
+            ${label}
+          </label>
+
+          <input
+            name="${name}"
+            class="field inset-field"
+            placeholder="${placeholder}"
+          />
+
+        </div>
+      `;
+    }
+
+    /* =========================================================
+       DETAIL
+    ========================================================= */
+
+    function branchView(branch) {
+      if (!branch) {
+        go("branches");
+        return "";
+      }
+
+      const saved = read(STORAGE.saved);
+      const isSaved = saved.includes(branch.slug);
+
+      return `
+        ${navbar()}
+
+        <main class="page">
+          <div class="shell">
+
+            <button
+              class="text-action back"
+              onclick="go('branches')"
+            >
+              ← 回到所有 Branch
+            </button>
+
+            <section class="detail-wrap">
+
+              <div>
+
+                <div class="detail-kind eyebrow">
+                  ${branch.typeZh} · ${branch.type}
+                </div>
+
+                <h1 class="detail-title">
+                  ${escapeHTML(branch.name)}
+                </h1>
+
+                <p class="detail-problem">
+                  ${escapeHTML(branch.problem)}
+                </p>
+
+                <div class="source-note">
+                  从一个真实的小麻烦开始。
+                  <span class="small-en">
+                    Grown from a real need.
+                  </span>
+                </div>
+
+                <section class="detail-section">
+
+                  <h3>
+                    它会做什么？
+                  </h3>
+
+                  <p>
+                    ${branchDescription(branch.slug)}
+                  </p>
+
+                </section>
+
+                <section
+                  id="mockOutput"
+                  class="detail-section hidden"
+                >
+                </section>
+
+              </div>
+
+              <aside class="use-panel">
+
+                <div class="panel-label">
+                  试着使用这个 Branch
+                </div>
+
+                <form
+                  id="branchForm"
+                  onsubmit="runBranch(event,'${branch.slug}')"
+                >
+
+                  ${branchForm(branch)}
+
+                  <div class="use-actions">
+
+                    <button
+                      type="submit"
+                      class="btn btn-primary tactile"
+                    >
+                      用用看 →
+                      <span class="small-en">
+                        Use this Branch
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-secondary tactile"
+                      onclick="toggleSave('${branch.slug}')"
+                    >
+                      ${isSaved ? "已保存 ✓" : "保存到我的枝间"}
+                    </button>
+
+                  </div>
+
+                </form>
+
+                <div class="adaptation">
+
+                  <button
+                    class="text-action"
+                    onclick="toggleAdaptation()"
+                  >
+                    好像还差一点
+                  </button>
+
+                  <span class="small-en">
+                    Request adaptation
+                  </span>
+
+                  <div
+                    id="adaptationBox"
+                    class="hidden"
+                    style="margin-top:18px;"
+                  >
+
+                    <textarea
+                      id="adaptationText"
+                      class="field inset-field"
+                      placeholder="哪里不太适合你？"
+                    ></textarea>
+
+                    <button
+                      class="btn btn-primary tactile"
+                      style="width:100%;margin-top:10px;"
+                      onclick="submitAdaptation('${branch.slug}')"
+                    >
+                      交给 Personalware
+                      <span class="small-en">
+                        Request adaptation
+                      </span>
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </aside>
+
+            </section>
+
           </div>
-        </div>
-
-        <div class="my-panel" id="panel-memory">
-          <div class="memory-list" id="memory-list"></div>
-        </div>
-
-        <div class="my-panel" id="panel-login">
-          <div class="surface settings-card">
-            <p class="note">登录为可选功能。枝间 MVP 阶段坚持 0 注册、0 安装、点开即用；这里仅作演示占位。</p>
-            <div class="field">
-              <label>名字 / 邮箱（演示）</label>
-              <input id="login-name" type="text" placeholder="你的名字或邮箱" />
-            </div>
-            <div id="login-state" style="margin-bottom:12px;font-size:13.5px;color:var(--ink-soft);"></div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <button class="btn btn-primary" onclick="doLogin()">登录（演示）</button>
-              <button class="btn btn-secondary" onclick="doLogout()">退出</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- 转场：花瓣散开 → 落向底部 → 枝条生长 → 开花 -->
-  <div class="transition" id="transition"></div>
-
-  <!-- 模态 -->
-  <div class="modal-mask" id="modal">
-    <div class="modal-card relief" id="modal-card"></div>
-  </div>
-
-  <div class="toast" id="toast"></div>
-
-<script>
-/* ================= 数据 ================= */
-const BRANCHES = [
-  {
-    slug:'teach-me-like-this',
-    name:'Teach Me Like This',
-    tag:'KNOWLEDGE BRANCH',
-    palette:'blue',
-    berry:'#80B0D8',
-    problem:'我有一篇必须读、但完全看不进去的论文。',
-    keywords:['论文','paper','读','阅读','理解','解释','学习','看不懂','rpg','文献','抽象','研究'],
-    inputs:[
-      {key:'text', label:'粘贴文本', type:'textarea', placeholder:'把你看不进去的那篇论文 / 文章贴进来…'},
-      {key:'style', label:'选择理解方式', type:'select', options:['温迪口吻 + RPG 世界地图','幼儿园老师 + 童话故事','老教授 + 一堂讲座','好朋友 + 深夜聊天']}
-    ],
-    mock: v => {
-      const style = v.style || '温迪口吻 + RPG 世界地图';
-      return `<div class="mock">
-        <p class="mock-label">理解方式 · ${style}</p>
-        <p class="mock-note">mock 演示 · 已保留关键英文原文</p>
-        <div class="rpg-map">
-          <div class="rpg-node">🧭 <b>Abstract</b><br>出发营地，认识这篇论文要解决的问题</div>
-          <div class="rpg-node">🗺️ <b>Method</b><br>通往主城的小径（作者怎么做的）</div>
-          <div class="rpg-node">⛰️ <b>Experiments</b><br>一路打怪升级的高地</div>
-          <div class="rpg-node">🏰 <b>Results &amp; Discussion</b><br>主城：答案与争论都在这里</div>
-          <div class="rpg-node">🌟 <b>Conclusion</b><br>宝箱：记住这一句就够了</div>
-        </div>
-        <blockquote>“这篇论文其实是一张地图：你从 Abstract 的营地出发，沿着 Method 的小径走到 Experiments 的高地，最后在 Conclusion 打开宝箱——拿到的不是金币，是一句你能转述给别人的话。”</blockquote>
-        <p class="keep">Key terms（原文保留）：<em>contribution · generalization · ablation study</em></p>
-      </div>`;
+        </main>
+      `;
     }
-  },
-  {
-    slug:'training-branch',
-    name:'XXX’s Training Branch',
-    tag:'PERSONA BRANCH',
-    palette:'green',
-    berry:'#90B080',
-    problem:'我信任一个健身博主，但今天状态特殊，想按 TA 的判断体系得到建议。',
-    keywords:['健身','训练','workout','教练','博主','运动','睡眠','酸痛','练','肌肉','周期','器械'],
-    inputs:[
-      {key:'sleep', label:'昨晚睡眠', type:'select', options:['充足（7h+）','一般（5–6h）','不足（<5h）']},
-      {key:'sore', label:'身体酸痛', type:'select', options:['无','轻微','明显']},
-      {key:'cycle', label:'今日周期状态', type:'select', options:['状态好','普通','状态差']},
-      {key:'time', label:'可用时间', type:'text', placeholder:'例如：45 分钟'},
-      {key:'gear', label:'可用器械', type:'text', placeholder:'例如：只有一对哑铃 / 无器械'}
-    ],
-    mock: v => {
-      const sleep = v.sleep || '一般';
-      const sore = v.sore || '轻微';
-      const cycle = v.cycle || '普通';
-      const time = v.time || '45 分钟';
-      const gear = v.gear || '无器械';
-      const plan = sleep.includes('不足') || cycle === '状态差'
-        ? '今天不追求重量，做低强度恢复：15 分钟快走 + 全身动态拉伸，保持动起来即可。'
-        : '今天做中等强度全身循环（深蹲、俯卧撑、臀桥、核心），每组 45 秒，循环 4 轮，结尾 5 分钟拉伸。';
-      return `<div class="mock">
-        <p class="mock-label">按 TA 的公开训练理念 · 今日建议</p>
-        <p class="mock-note">mock 演示 · 基于“状态优先、可恢复、可持续”的判断体系</p>
-        <blockquote>${plan}</blockquote>
-        <div class="chips">
-          <span class="chip">睡眠：${sleep}</span>
-          <span class="chip">酸痛：${sore}</span>
-          <span class="chip">周期：${cycle}</span>
-          <span class="chip">时间：${time}</span>
-          <span class="chip">器械：${gear}</span>
-        </div>
-        <p class="disclaimer">⚠️ 非医疗建议 · 身体不适请咨询专业医师。</p>
-      </div>`;
-    }
-  },
-  {
-    slug:'less-ai-more-me',
-    name:'Less AI. More Me.',
-    tag:'SKILL BRANCH',
-    palette:'yellow',
-    berry:'#E8D078',
-    problem:'AI 写完东西，但充满 AI 味。',
-    keywords:['ai味','改稿','润色','自然','人味','写作','文字','洗稿','语气','生硬','文案','去ai'],
-    inputs:[
-      {key:'text', label:'一段文字', type:'textarea', placeholder:'粘贴那段“充满 AI 味”的文字…'}
-    ],
-    mock: v => {
-      const t = (v.text || '').trim();
-      const after = t
-        ? t.replace(/首先|其次|再次|最后|总而言之|综上所述|值得注意的是|此外|与此同时|在当今|随着.{0,12}的发展/g, ' ')
-            .replace(/人工智能|AI/gi, '我')
-            .replace(/进行|开展/g, '做')
-            .replace(/\s+/g, ' ')
-            .trim()
-        : '把文字贴进来，它会变得更像“你”说的话。';
-      return `<div class="mock">
-        <p class="mock-label">去 AI 味 · 更像人写的版本</p>
-        <p class="mock-note">mock 演示 · 去掉套话、空转连接词与机器腔</p>
-        <blockquote>${after}</blockquote>
-        ${t ? `<p class="keep">原文：${t.slice(0,120)}${t.length>120?'…':''}</p>` : ''}
-        <p class="keep">原理：去掉“首先/其次/总而言之”这类脚手架词，把“进行”还原成“做”，把主语还给“我”。</p>
-      </div>`;
-    }
-  },
-  {
-    slug:'morning-trend-radar',
-    name:'Morning Trend Radar',
-    tag:'WORKFLOW BRANCH',
-    palette:'pink',
-    berry:'#F1BEC5',
-    problem:'团队每天要人工追踪行业热点。',
-    keywords:['热点','趋势','行业','新闻','追踪','摘要','推送','团队','雷达','监测','情报','日报'],
-    inputs:[
-      {key:'domain', label:'关注领域', type:'text', placeholder:'例如：AI 应用、消费品牌、新能源…'},
-      {key:'pushTime', label:'推送时间', type:'text', placeholder:'例如：每天 08:30'},
-      {key:'pushTo', label:'推送位置', type:'select', options:['飞书群','钉钉群','邮件','企业微信']}
-    ],
-    mock: v => {
-      const domain = v.domain || 'AI 应用';
-      const pushTime = v.pushTime || '08:30';
-      const pushTo = v.pushTo || '飞书群';
-      return `<div class="mock">
-        <p class="mock-label">今日 mock 运行结果 · ${domain}</p>
-        <p class="mock-note">${pushTime} 推送到 ${pushTo}</p>
-        <div class="pipeline">
-          <div class="pipe-step"><span class="dot"></span> 抓取：27 个信源 · 1,342 条新内容</div>
-          <div class="pipe-step"><span class="dot"></span> 去重：1,342 → 486 条独立信息</div>
-          <div class="pipe-step"><span class="dot"></span> 分类：产品 / 融资 / 观点 / 数据 四类</div>
-          <div class="pipe-step"><span class="dot"></span> 摘要：生成 9 条一句话要点</div>
-          <div class="pipe-step"><span class="dot"></span> 生成文档：Morning Radar 08:30.md</div>
-          <div class="pipe-step"><span class="dot"></span> 推送：已送达 ${pushTo} ✓</div>
-        </div>
-        <blockquote>今日 Top 3：① 某大厂上线新一代 ${domain} 助手，主打“主动执行”；② 某初创公司把 ${domain} 接入线下门店，转化率提升 18%；③ 一份新报告称 ${domain} 的推理成本 6 个月下降 41%。</blockquote>
-      </div>`;
-    }
-  },
-  {
-    slug:'what-do-i-need-today',
-    name:'What Do I Need Today?',
-    tag:'APP BRANCH',
-    palette:'mint',
-    berry:'#90A868',
-    problem:'每次出门都担心忘东西。',
-    keywords:['出门','行李','清单','忘东西','旅行','打包','会议','检查','带什么','收拾','出差'],
-    inputs:[
-      {key:'scene', label:'场景', type:'select', options:['旅行','开会','日常通勤','健身']},
-      {key:'dest', label:'目的地', type:'text', placeholder:'例如：杭州 / 公司 / 家附近'},
-      {key:'days', label:'天数', type:'text', placeholder:'例如：3'},
-      {key:'weather', label:'天气', type:'select', options:['晴','阴','雨','雪','不确定']},
-      {key:'act', label:'活动', type:'text', placeholder:'例如：登山、晚宴、路演…'}
-    ],
-    mock: v => {
-      const scene = v.scene || '旅行';
-      const weather = v.weather || '晴';
-      const lists = {
-        '旅行':['证件 / 手机 / 充电器','换洗衣物 × 天数','洗漱用品','常备药','雨具' + (weather.includes('雨')?'（必带）':'（可选）'),'移动电源','耳机','一双好走的鞋'],
-        '开会':['电脑 + 充电器','演示文稿（已备份）','转接头 / 翻页笔','名片 / 工牌','笔记本 + 笔','水杯'],
-        '日常通勤':['手机 / 钥匙 / 门卡','耳机','充电宝','雨伞（看天气）','水杯','纸巾'],
-        '健身':['运动服 / 鞋','毛巾','水杯','换洗衣物','会员卡 / 手环','洗护用品']
+
+    function branchDescription(slug) {
+      const descriptions = {
+        "teach-me-like-this":
+          "把“读懂”从唯一方式变成很多种方式。你可以选择角色口吻、世界观、比喻方式或考试模式，同时保留真正重要的英文原文。",
+
+        "training-branch":
+          "把一个创作者公开表达过的训练理念整理成可调用的判断体系，再结合你今天的状态给出建议。示例结果不构成医疗建议。",
+
+        "less-ai-more-me":
+          "不是简单删掉几个 AI 常用词，而是重新调整节奏、句式、信息密度和表达习惯，让文字重新像一个具体的人。",
+
+        "morning-trend-radar":
+          "把重复的信息追踪变成固定流程：抓取、去重、分类、摘要、形成文档，再送到团队真正工作的地方。",
+
+        "what-do-i-need-today":
+          "不从一份永远不变的万能清单开始，而从今天的场景开始。旅行、上课、开会和普通出门，可以得到完全不同的 Belonging Check。",
+
+        "friends-anon-question-box":
+          "生成一个朋友限定的匿名入口。朋友免登录进入，获得随机匿名身份，再提交问题；箱主可以审核、回答并把回答卡重新发回群里。"
       };
-      const items = lists[scene] || lists['日常通勤'];
-      const checked = scene==='日常通勤' ? [0,1] : [0];
-      return `<div class="mock">
-        <p class="mock-label">${scene}清单 · Belonging Check</p>
-        <p class="mock-note">${v.dest?('目的地：'+v.dest+' · '):''}${v.days?('天数：'+v.days+' · '):''}天气：${weather}</p>
-        <div class="checklist">
-          ${items.map((it,i)=>`<label><input type="checkbox" ${checked.includes(i)?'checked':''} onchange="this.nextElementSibling.classList.toggle('done',this.checked)"><span class="${checked.includes(i)?'done':''}">${it}</span></label>`).join('')}
-        </div>
-        <p class="keep">出门前花 10 秒过一遍，不再“总感觉忘了什么”。</p>
-      </div>`;
+
+      return descriptions[slug];
     }
-  },
-  {
-    slug:'friends-anon-question-box',
-    name:'Friends’ Anonymous Question Box',
-    tag:'LINK BRANCH',
-    palette:'lilac',
-    berry:'#F7B3C8',
-    problem:'朋友之间想玩匿名提问、夸夸、爆料或整活，但普通问卷太正经，群聊又会暴露身份、刷屏，还容易冷场。',
-    keywords:['匿名','提问','朋友','群聊','夸夸','真心话','问卷','整活','爆料','回忆杀','提问箱','party','游戏'],
-    inputs:[
-      {key:'play', label:'玩法', type:'select', options:['真心话','夸夸','回忆杀','整活']},
-      {key:'openTo', label:'开放对象', type:'select', options:['好友','群聊','二维码']},
-      {key:'scale', label:'问题尺度', type:'select', options:['温和','适中','刺激']},
-      {key:'followup', label:'允许追问', type:'select', options:['允许','不允许']},
-      {key:'pic', label:'允许图片', type:'select', options:['允许','不允许']},
-      {key:'voice', label:'允许语音', type:'select', options:['允许','不允许']},
-      {key:'duration', label:'开放时间', type:'text', placeholder:'例如：24 小时'},
-      {key:'review', label:'审核开关', type:'select', options:['箱主审核后可见','直接可见']},
-      {key:'code', label:'群暗号', type:'text', placeholder:'例如：梧桐树下'}
-    ],
-    mock: v => {
-      const code = v.code || '梧桐树下';
-      const link = 'https://anon.box/f/' + Math.random().toString(36).slice(2,6);
-      const play = v.play || '真心话';
-      return `<div class="mock">
-        <p class="mock-label">朋友限定匿名提问箱 · 已生成</p>
-        <p class="mock-note">暗号「${code}」· ${v.openTo||'好友'} · ${v.duration||'24 小时'} · ${v.review||'箱主审核后可见'}</p>
-        <div class="anon-box">
-          <div>
-            <div class="anon-link text-emboss-soft">${link}</div>
-            <p class="keep" style="margin-top:6px;">免登录进入 · 随机匿名昵称 · 不收集手机号</p>
+
+    /* =========================================================
+       RUN MOCK
+    ========================================================= */
+
+    function runBranch(event, slug) {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+      const values = Object.fromEntries(new FormData(form).entries());
+
+      const output = document.querySelector("#mockOutput");
+
+      output.classList.remove("hidden");
+
+      output.innerHTML = `
+        <div class="mock-output">
+
+          <div class="output-title">
+            MOCK RESULT
           </div>
-          <div class="qr" id="qr"></div>
+
+          <div class="output-body">
+            ${mockResult(slug, values)}
+          </div>
+
         </div>
-        <div class="pipeline">
-          <div class="pipe-step"><span class="dot"></span> 创建房间 → 生成链接 / 二维码</div>
-          <div class="pipe-step"><span class="dot"></span> 朋友免登录进入 → 随机匿名昵称 🦊🐧🐿️</div>
-          <div class="pipe-step"><span class="dot"></span> 提交问题 → ${v.review||'箱主审核'} → 回答</div>
-          <div class="pipe-step"><span class="dot"></span> 生成回答卡回群</div>
+      `;
+
+      output.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+
+    function mockResult(slug, data) {
+
+      if (slug === "teach-me-like-this") {
+        return `
+          <strong>🗺️ 世界地图已经展开。</strong>
+
+          <p>
+            先把这篇论文想象成一张 RPG 地图。
+            作者并不是一次告诉你所有答案，
+            而是在地图上放了几个必须经过的区域。
+          </p>
+
+          <p>
+            <strong>主城：</strong>
+            论文真正想解决的问题。
+          </p>
+
+          <p>
+            <strong>支线任务：</strong>
+            不同理论、案例与研究方法。
+          </p>
+
+          <p>
+            <strong>最终 Boss：</strong>
+            作者需要证明自己的解释比其他解释更成立。
+          </p>
+
+          <p>
+            你选择的理解方式：
+            <strong>${escapeHTML(data.style || "温迪口吻 + RPG 世界地图")}</strong>
+          </p>
+
+          <p>
+            关键英文概念将保留原文，
+            中文负责解释关系，而不是替换原概念。
+          </p>
+        `;
+      }
+
+      if (slug === "training-branch") {
+        return `
+          <strong>今天不追求“完成训练”，先判断值不值得练。</strong>
+
+          <p>
+            睡眠：${escapeHTML(data.sleep || "未填写")}<br>
+            酸痛：${escapeHTML(data.soreness || "未填写")}<br>
+            可用时间：${escapeHTML(data.time || "未填写")}
+          </p>
+
+          <p>
+            Mock 建议：今天可以把训练目标改成
+            <strong>恢复 + 维持习惯</strong>，
+            缩短训练时间、降低动作数量，
+            不追 PR。
+          </p>
+
+          <small>
+            此结果仅用于演示 Branch 形式，
+            不构成医疗或健康诊断建议。
+          </small>
+        `;
+      }
+
+      if (slug === "less-ai-more-me") {
+        const original = data.text || "我们应该充分认识到这一问题的重要性，并积极采取措施进行改善。";
+
+        return `
+          <p>
+            <strong>原句：</strong><br>
+            ${escapeHTML(original)}
+          </p>
+
+          <p>
+            <strong>Less AI. More Me.：</strong><br>
+            这件事其实没必要说得那么大。
+            问题已经摆在这里了，
+            下一步是看看我们到底能改什么。
+          </p>
+
+          <p>
+            调整重点：减少总结腔、对称句式和空泛判断，
+            保留真正有信息的部分。
+          </p>
+        `;
+      }
+
+      if (slug === "morning-trend-radar") {
+        return `
+          <p>
+            <strong>${escapeHTML(data.field || "AI Agent")} · 今日 Radar</strong>
+          </p>
+
+          <p>
+            07:00 抓取来源<br>
+            ↓<br>
+            去重 128 → 41 条<br>
+            ↓<br>
+            分类为 产品 / 技术 / 公司 / 研究<br>
+            ↓<br>
+            提取 8 条值得关注内容<br>
+            ↓<br>
+            生成《Morning Trend Radar》<br>
+            ↓<br>
+            ${escapeHTML(data.time || "09:00")}
+            推送至
+            ${escapeHTML(data.destination || "团队文档")}
+          </p>
+        `;
+      }
+
+      if (slug === "what-do-i-need-today") {
+        return `
+          <strong>
+            ${escapeHTML(data.scene || "日常出门")} · Belonging Check
+          </strong>
+
+          <div style="margin-top:13px">
+
+            ${checkItem("手机")}
+            ${checkItem("钥匙")}
+            ${checkItem("耳机")}
+            ${checkItem("充电宝")}
+            ${checkItem("水")}
+            ${checkItem("今天会用到的证件 / 门禁")}
+            ${checkItem("和活动有关的特殊物品")}
+
+          </div>
+
+          <p style="margin-top:15px">
+            去往：
+            ${escapeHTML(data.destination || "今天的目的地")}。
+            清单会根据天气、停留时间和活动继续变化。
+          </p>
+        `;
+      }
+
+      if (slug === "friends-anon-question-box") {
+        const id = Math.random().toString(36).slice(2, 7);
+
+        return `
+          <p>
+            <strong>匿名提问箱已创建。</strong>
+          </p>
+
+          <p>
+            https://anon.box/f/${id}
+          </p>
+
+          <p>
+            创建房间 →
+            生成链接 / 二维码 →
+            朋友免登录进入 →
+            随机匿名昵称 →
+            提交问题 →
+            箱主审核 / 回答 →
+            生成回答卡回群
+          </p>
+
+          <p>
+            🕵️ 匿名朋友问：
+            “如果必须和群里一个人交换人生三天，你选谁？”
+          </p>
+
+          <p>
+            箱主答：……<br>
+            围观群众可贴表情。
+          </p>
+
+          <small>
+            可随时关闭链接 · 不收集手机号 ·
+            禁止骚扰与人肉。
+          </small>
+        `;
+      }
+    }
+
+    function checkItem(text) {
+      return `
+        <label class="check-row">
+          <input type="checkbox">
+          <span>${text}</span>
+        </label>
+      `;
+    }
+
+    /* =========================================================
+       SAVE
+    ========================================================= */
+
+    function toggleSave(slug) {
+      let saved = read(STORAGE.saved);
+
+      if (saved.includes(slug)) {
+        saved = saved.filter(item => item !== slug);
+        showToast("已经从我的枝间移除。");
+      } else {
+        saved.unshift(slug);
+        showToast("已经长进你的枝间。");
+      }
+
+      write(STORAGE.saved, saved);
+      render();
+    }
+
+    /* =========================================================
+       ADAPTATION
+    ========================================================= */
+
+    function toggleAdaptation() {
+      document
+        .querySelector("#adaptationBox")
+        ?.classList
+        .toggle("hidden");
+    }
+
+    function submitAdaptation(slug) {
+      const text =
+        document.querySelector("#adaptationText")
+          ?.value
+          .trim();
+
+      if (!text) {
+        showToast("告诉我们哪里还差一点。");
+        return;
+      }
+
+      const adaptations =
+        read(STORAGE.adaptations);
+
+      adaptations.unshift({
+        slug,
+        text,
+        status: "已转交 Personalware",
+        time: nowLabel()
+      });
+
+      write(
+        STORAGE.adaptations,
+        adaptations
+      );
+
+      document.querySelector(
+        "#adaptationBox"
+      ).innerHTML = `
+        <div class="mock-output">
+          <strong>已经转交 Personalware。</strong>
+          <p style="margin-top:8px;margin-bottom:0">
+            这个请求不会修改原 Branch。
+            它会作为一次新的定制需求被记录。
+          </p>
         </div>
-        <div class="answer-card">
-          <div>🕵️ 匿名朋友问：<em>“如果必须和群里一个人交换人生三天，你选谁？”</em></div>
-          <div style="margin-top:6px;">箱主答：…… （围观群众可贴表情 🎭）</div>
+      `;
+
+      showToast("Request adaptation 已记录。");
+    }
+
+    /* =========================================================
+       GROW
+    ========================================================= */
+
+    function growView() {
+      return `
+        ${navbar()}
+
+        <main class="grow">
+          <div class="shell">
+
+            <section class="grow-card">
+
+              <div class="seed"></div>
+
+              <div class="eyebrow">
+                NO MATCH YET
+              </div>
+
+              <h1 class="grow-title">
+                那就让第一个长出来。
+              </h1>
+
+              <p class="grow-copy">
+                目前还没有足够接近的 Branch。
+                这不意味着你的需求太小，
+                只是它还没有被收录。
+                <span class="small-en">
+                  No close match yet.
+                  Your need can become a seed.
+                </span>
+              </p>
+
+              <div class="grow-need">
+                “${escapeHTML(state.lastNeed)}”
+              </div>
+
+              <button
+                class="btn btn-primary tactile"
+                onclick="growSeed()"
+              >
+                Grow the first one
+                <span class="small-en">
+                  把它变成一颗 seed
+                </span>
+              </button>
+
+              <div style="margin-top:22px">
+                <button
+                  class="text-action"
+                  onclick="go('home')"
+                >
+                  换一种说法
+                </button>
+              </div>
+
+            </section>
+
+          </div>
+        </main>
+      `;
+    }
+
+    function growSeed() {
+      const seeds = read(STORAGE.seeds);
+
+      seeds.unshift({
+        need: state.lastNeed,
+        status: "Seed",
+        time: nowLabel()
+      });
+
+      write(STORAGE.seeds, seeds);
+
+      showToast("已经种下一颗 Seed。");
+
+      state.mineTab = "seeds";
+
+      setTimeout(() => {
+        go("mine");
+      }, 500);
+    }
+
+    /* =========================================================
+       MY BRANCHES
+    ========================================================= */
+
+    function mineView() {
+      return `
+        ${navbar()}
+
+        <main class="page">
+          <div class="shell">
+
+            <div class="page-head">
+
+              <div>
+
+                <div class="eyebrow">
+                  MY BRANCHES
+                </div>
+
+                <h1 class="editorial">
+                  我的枝间。
+                </h1>
+
+                <p>
+                  这里保存与你有关的 Branch、还没有长成的 Seed、
+                  定制请求和你曾经说过的需求。
+                </p>
+
+              </div>
+
+            </div>
+
+            <section class="mine-grid">
+
+              <nav class="mine-tabs">
+
+                ${mineTabButton("saved", "保存的 Branch")}
+                ${mineTabButton("seeds", "Seeds")}
+                ${mineTabButton("adaptations", "Personalware")}
+                ${mineTabButton("memory", "记忆")}
+                ${mineTabButton("settings", "设置")}
+                ${mineTabButton("account", "账号")}
+
+              </nav>
+
+              <div class="mine-content">
+                ${mineTabContent()}
+              </div>
+
+            </section>
+
+          </div>
+        </main>
+      `;
+    }
+
+    function mineTabButton(id, label) {
+      return `
+        <button
+          class="mine-tab ${state.mineTab === id ? "active" : ""}"
+          onclick="setMineTab('${id}')"
+        >
+          ${label}
+        </button>
+      `;
+    }
+
+    function setMineTab(tab) {
+      state.mineTab = tab;
+      render();
+    }
+
+    function mineTabContent() {
+
+      if (state.mineTab === "saved") {
+        const saved = read(STORAGE.saved);
+
+        if (!saved.length) {
+          return empty(
+            "这里还没有 Branch。",
+            "找到喜欢的 Branch 后，可以把它保存到这里。"
+          );
+        }
+
+        return `
+          <div class="saved-grid">
+
+            ${saved.map(slug => {
+              const branch = getBranch(slug);
+
+              if (!branch) return "";
+
+              return `
+                <article class="saved-item">
+
+                  <div class="eyebrow">
+                    ${branch.typeZh}
+                  </div>
+
+                  <h3 class="editorial">
+                    ${escapeHTML(branch.name)}
+                  </h3>
+
+                  <p>
+                    ${escapeHTML(branch.problem)}
+                  </p>
+
+                  <button
+                    class="text-action"
+                    onclick="go('branch','${branch.slug}')"
+                  >
+                    打开 Branch →
+                  </button>
+
+                </article>
+              `;
+            }).join("")}
+
+          </div>
+        `;
+      }
+
+      if (state.mineTab === "seeds") {
+        const seeds = read(STORAGE.seeds);
+
+        if (!seeds.length) {
+          return empty(
+            "还没有 Seed。",
+            "当没有 Branch 能回答你的需求时，可以种下第一个。"
+          );
+        }
+
+        return seeds.map(seed => `
+          <div class="record">
+
+            <strong>
+              ${escapeHTML(seed.need)}
+            </strong>
+
+            <div class="record-time">
+              ${escapeHTML(seed.status)}
+              ·
+              ${escapeHTML(seed.time)}
+            </div>
+
+          </div>
+        `).join("");
+      }
+
+      if (state.mineTab === "adaptations") {
+        const adaptations =
+          read(STORAGE.adaptations);
+
+        if (!adaptations.length) {
+          return empty(
+            "还没有定制请求。",
+            "如果一个 Branch 很接近、但还不够适合你，可以交给 Personalware。"
+          );
+        }
+
+        return adaptations.map(item => {
+          const branch = getBranch(item.slug);
+
+          return `
+            <div class="record">
+
+              <strong>
+                ${escapeHTML(
+                  branch?.name || item.slug
+                )}
+              </strong>
+
+              <p class="muted">
+                ${escapeHTML(item.text)}
+              </p>
+
+              <div class="record-time">
+                ${escapeHTML(item.status)}
+                ·
+                ${escapeHTML(item.time)}
+              </div>
+
+            </div>
+          `;
+        }).join("");
+      }
+
+      if (state.mineTab === "memory") {
+        const memories =
+          read(STORAGE.memories);
+
+        if (!memories.length) {
+          return empty(
+            "枝间还不认识你。",
+            "你说过的需求会留在这台设备上，帮助之后的匹配更贴近你。"
+          );
+        }
+
+        return `
+          <p class="muted" style="line-height:1.8">
+            MVP 阶段，记忆只保存在你的浏览器 localStorage 中。
+            不上传服务器。
+          </p>
+
+          ${memories.map(item => `
+            <div class="record">
+
+              ${escapeHTML(item.text)}
+
+              <div class="record-time">
+                ${escapeHTML(item.time)}
+              </div>
+
+            </div>
+          `).join("")}
+        `;
+      }
+
+      if (state.mineTab === "settings") {
+        const s = settings();
+
+        return `
+          <div class="settings-card">
+
+            <div class="field-group">
+
+              <label class="field-label">
+                默认匹配模型
+              </label>
+
+              <select
+                id="settingModel"
+                class="field inset-field"
+              >
+                <option
+                  value="deepseek-v4-flash"
+                  ${s.model === "deepseek-v4-flash" ? "selected" : ""}
+                >
+                  deepseek-v4-flash
+                </option>
+
+                <option
+                  value="local-demo"
+                  ${s.model === "local-demo" ? "selected" : ""}
+                >
+                  Local Demo Matcher
+                </option>
+              </select>
+
+            </div>
+
+            <div class="field-group">
+
+              <label class="field-label">
+                API Proxy 地址
+              </label>
+
+              <input
+                id="settingApiBase"
+                class="field inset-field"
+                value="${escapeHTML(s.apiBase || "")}"
+                placeholder="例如：https://your-domain.com/api/match"
+              />
+
+            </div>
+
+            <div class="field-group">
+
+              <label class="field-label">
+                API Key
+              </label>
+
+              <input
+                id="settingApiKey"
+                type="password"
+                class="field inset-field"
+                value="${escapeHTML(s.apiKey || "")}"
+                placeholder="MVP 可留空"
+              />
+
+            </div>
+
+            <button
+              class="btn btn-primary tactile"
+              onclick="saveSettings()"
+            >
+              保存设置
+            </button>
+
+            <p class="settings-note">
+              当前 MVP 为了做到 0 安装、直接打开即可使用，
+              默认采用浏览器本地匹配逻辑。
+              正式上线时不要把平台官方 API Key 写进前端；
+              应由服务端或 Serverless Proxy 保管密钥。
+            </p>
+
+          </div>
+        `;
+      }
+
+      if (state.mineTab === "account") {
+        return `
+          <div class="settings-card">
+
+            <div class="eyebrow">
+              OPTIONAL ACCOUNT
+            </div>
+
+            <h2 class="editorial">
+              不登录，也可以使用枝间。
+            </h2>
+
+            <p class="muted" style="line-height:1.8">
+              账号只用于未来跨设备同步。
+              当前 MVP 的收藏、Seed、记忆和定制请求，
+              都保存在当前浏览器。
+            </p>
+
+            <button
+              class="btn btn-secondary tactile"
+              onclick="showToast('MVP 暂不要求注册。')"
+            >
+              登录 / 创建账号
+              <span class="small-en">
+                Optional
+              </span>
+            </button>
+
+          </div>
+        `;
+      }
+    }
+
+    function empty(title, text) {
+      return `
+        <div class="empty-state">
+
+          <strong>${title}</strong>
+
+          <p style="margin-top:9px;margin-bottom:0">
+            ${text}
+          </p>
+
         </div>
-        <p class="keep">提示：可随时关闭链接 · 禁止骚扰 / 人肉。</p>
-      </div>`;
+      `;
     }
-  }
-];
 
-const PALETTES = {
-  blue:  {outer:'#98C0E8', mid:'#80B0D8', inner:'#CCEBF5', center1:'#F0C030', center2:'#E8D078'},
-  green: {outer:'#90B080', mid:'#80B0A8', inner:'#D8F6CA', center1:'#F0C030', center2:'#E8D078'},
-  yellow:{outer:'#F0C030', mid:'#E8D078', inner:'#FFFFBF', center1:'#EF8E9D', center2:'#F9D8CC'},
-  pink:  {outer:'#F1BEC5', mid:'#EF8E9D', inner:'#F9D8CC', center1:'#F0C030', center2:'#E8D078'},
-  mint:  {outer:'#B7EBCC', mid:'#90A868', inner:'#B0C47F', center1:'#F0C030', center2:'#E8D078'},
-  lilac: {outer:'#C0C0D8', mid:'#F1BEC5', inner:'#F7B3C8', center1:'#F0C030', center2:'#E8D078'}
-};
+    function saveSettings() {
+      const next = {
+        model:
+          document.querySelector("#settingModel").value,
 
-/* ================= 工具 ================= */
-const $ = s => document.querySelector(s);
-const $$ = s => document.querySelectorAll(s);
-const byId = id => document.getElementById(id);
-let _uid = 0;
+        apiBase:
+          document.querySelector("#settingApiBase").value.trim(),
 
-function flowerSVG(p, opts={}){
-  const id = 'f' + (opts.id || (_uid++));
-  const petals = opts.petals || 6;
-  const seed = opts.seed || 0;
-  const blur = opts.blur != null ? opts.blur : 1.2;
-  let defs = `<filter id="${id}b" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${blur}"/></filter>`;
-  defs += `<radialGradient id="${id}c" cx="50%" cy="42%" r="75%"><stop offset="0%" stop-color="${p.center1}" stop-opacity=".95"/><stop offset="100%" stop-color="${p.center2}" stop-opacity=".9"/></radialGradient>`;
-  let parts = [];
-  const layer = (count, rx, ry, cy, baseAngle) => {
-    for(let i=0;i<count;i++){
-      const gid = `${id}g${i}${count}`;
-      defs += `<radialGradient id="${gid}" cx="50%" cy="28%" r="78%">
-        <stop offset="0%" stop-color="${p.outer}" stop-opacity=".95"/>
-        <stop offset="55%" stop-color="${p.mid}" stop-opacity=".8"/>
-        <stop offset="100%" stop-color="${p.inner}" stop-opacity=".3"/>
-      </radialGradient>`;
-      const a = baseAngle + i*(360/count);
-      parts.push(`<ellipse class="petal" cx="50" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${gid})" opacity=".92" transform="rotate(${a} 50 50)" filter="url(#${id}b)"/>`);
+        apiKey:
+          document.querySelector("#settingApiKey").value.trim()
+      };
+
+      write(STORAGE.settings, next);
+
+      showToast("设置已保存在这台设备上。");
     }
-  };
-  layer(petals, 16, 30, 27, seed);
-  layer(petals, 10, 20, 34, seed + 360/petals/2);
-  const core = `<circle class="bloom-core" cx="50" cy="50" r="12" fill="url(#${id}c)"/>`;
-  return `<svg viewBox="0 0 100 100" class="flower-svg"><defs>${defs}</defs>${parts.join('')}${core}</svg>`;
-}
 
-function stemSVG(curve, stroke=null, opts={}){
-  const s = stroke || 'var(--stem-3)';
-  return `<svg viewBox="0 0 100 200" preserveAspectRatio="none">
-    <path class="stem-path" d="${curve}" stroke="${s}" stroke-width="${opts.width||2.2}" stroke-dasharray="${opts.dash?'240':'none'}" stroke-dashoffset="${opts.dash?'240':'0'}" style="${opts.style||''}"/>
-  </svg>`;
-}
+    /* =========================================================
+       PRESS / RELEASE PHYSICS
+    ========================================================= */
 
-function esc(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function installTactileListeners() {
 
-/* ================= 存储 ================= */
-const LS_SETTINGS = 'zj_settings';
-const LS_MEMORY = 'zj_memory';
-const LS_USER = 'zj_user';
+      document
+        .querySelectorAll(".tactile")
+        .forEach(button => {
 
-function readLS(k, fallback){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
-function writeLS(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+          button.addEventListener(
+            "pointerdown",
+            () => {
+              button.classList.add("is-pressed");
+            }
+          );
 
-const DEFAULT_SETTINGS = { provider:'deepseek', baseUrl:'https://api.deepseek.com/v1', model:'deepseek-chat', apiKey:'' };
-function getSettings(){ return Object.assign({}, DEFAULT_SETTINGS, readLS(LS_SETTINGS, {})); }
-function getMemory(){ return readLS(LS_MEMORY, []); }
-function pushMemory(entry){
-  const m = getMemory();
-  m.unshift(Object.assign({ time: new Date().toLocaleString('zh-CN', {hour12:false}) }, entry));
-  writeLS(LS_MEMORY, m.slice(0, 200));
-}
+          const release = () => {
+            button.classList.remove("is-pressed");
+            button.classList.remove("release-glow");
 
-/* ================= 导航 ================= */
-let currentView = 'opening';
-function go(view){
-  currentView = view;
-  $$('.view').forEach(v => v.classList.remove('active'));
-  byId('view-' + view).classList.add('active');
-  $$('.nav-links button').forEach(b => b.classList.toggle('active', b.dataset.nav === view));
-  if(view === 'memory') renderMemory();
-  if(view === 'branches') drawGarden();
-  if(view === 'my'){ loadSettings(); renderMemory(); renderLoginState(); }
-  if(view === 'opening' && !byId('opening-flower').innerHTML) drawOpeningFlower();
-}
+            void button.offsetWidth;
 
-/* ================= Opening 花 ================= */
-function drawOpeningFlower(){
-  const wrap = byId('opening-flower');
-  const p = Object.assign({}, PALETTES.pink, {id:'open'});
-  const big = flowerSVG(p, {petals:7, seed:6, blur:1.6});
-  wrap.innerHTML = `
-    ${big}
-    <div class="flower-core">
-      <label>想要什么</label>
-      <input id="want-input" type="text" placeholder="最近有什么小麻烦？" autocomplete="off" />
-    </div>`;
-  const input = byId('want-input');
-  input.addEventListener('focus', ()=> wrap.classList.add('typing'));
-  input.addEventListener('blur', ()=> wrap.classList.remove('typing'));
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter') submitNeed(); });
-  byId('dont-input').addEventListener('keydown', e=>{ if(e.key==='Enter') submitNeed(); });
-}
+            button.classList.add("release-glow");
 
-/* ================= 花园 ================= */
-const STEM_CURVES = [
-  'M50 200 C 38 160, 58 118, 46 74',
-  'M50 200 C 62 164, 40 126, 54 78',
-  'M50 200 C 42 152, 62 108, 50 60',
-  'M50 200 C 60 158, 40 116, 52 70',
-  'M50 200 C 44 166, 56 122, 46 66',
-  'M50 200 C 56 154, 44 112, 54 72'
-];
-function drawGarden(){
-  const garden = byId('garden');
-  const spots = [
-    {left:'4%',  h:'46%', curve:0, flip:false},
-    {left:'22%', h:'58%', curve:1, flip:false},
-    {left:'40%', h:'44%', curve:2, flip:false},
-    {left:'58%', h:'56%', curve:3, flip:true},
-    {left:'76%', h:'46%', curve:4, flip:false},
-    {left:'91%', h:'58%', curve:5, flip:true}
-  ];
-  garden.innerHTML = BRANCHES.map((b, i)=>{
-    const s = spots[i];
-    const p = Object.assign({}, PALETTES[b.palette], {id:'g'+b.slug});
-    const fh = 110; // 花朵像素高度
-    const flower = flowerSVG(p, {petals:6, seed:i*9, blur:1.3});
-    const stem = stemSVG(STEM_CURVES[s.curve], null, {dash:true, width:2.2});
-    return `<div class="plant" style="left:${s.left};" data-slug="${b.slug}" onclick="openBranch('${b.slug}')">
-      <div class="stem-wrap" style="height:${s.h};">
-        <svg viewBox="0 0 100 200" preserveAspectRatio="none" class="stem-draw" data-seed="${i}">
-          <path class="stem-path" d="${STEM_CURVES[s.curve]}" stroke="${i%2? 'var(--stem-1)':'var(--stem-3)'}" stroke-width="2.2"/>
-        </svg>
-      </div>
-      <div class="flower-wrap sway" style="--sway:${s.flip?'-1deg':'1deg'}; --fh:${fh}px; top:calc(100% - ${s.h} - ${fh}px);">
-        ${flower}
-      </div>
-      <span class="branch-tag">${esc(b.name)}</span>
-      <span class="branch-name-m">${esc(b.name)}</span>
-    </div>`;
-  }).join('');
-  // 枝条逐根画出
-  requestAnimationFrame(()=>{
-    $$('#garden .stem-draw path').forEach((path, i)=>{
-      const len = path.getTotalLength ? path.getTotalLength() : 240;
-      path.style.strokeDasharray = len;
-      path.style.strokeDashoffset = len;
-      path.getBoundingClientRect();
-      path.style.transition = 'stroke-dashoffset 1.1s ' + (i*0.12) + 's var(--ease)';
-      path.style.strokeDashoffset = '0';
-    });
-  });
-}
+            setTimeout(() => {
+              button.classList.remove("release-glow");
+            }, 500);
+          };
 
-/* ================= Branch Detail ================= */
-let currentBranch = null;
-function openBranch(slug){
-  const b = BRANCHES.find(x => x.slug === slug);
-  if(!b) return;
-  currentBranch = b;
-  byId('detail-tag').textContent = b.tag;
-  byId('detail-name').textContent = b.name;
-  byId('detail-problem').textContent = b.problem;
-  const p = Object.assign({}, PALETTES[b.palette], {id:'d'+b.slug});
-  byId('detail-flower').innerHTML = flowerSVG(p, {petals:6, seed:4, blur:1.1});
-  byId('detail-inputs').innerHTML = b.inputs.map(inp => renderInput(inp)).join('');
-  byId('detail-output').innerHTML = '';
-  byId('berry').classList.remove('show');
-  byId('berry').style.setProperty('--berry', b.berry);
-  byId('run-btn').disabled = false;
-  go('detail');
-}
-function renderInput(inp){
-  const label = `<label for="in-${inp.key}">${esc(inp.label)}</label>`;
-  if(inp.type === 'select'){
-    const opts = inp.options.map(o => `<option>${esc(o)}</option>`).join('');
-    return `<div class="field">${label}<select id="in-${inp.key}">${opts}</select></div>`;
-  }
-  if(inp.type === 'textarea'){
-    return `<div class="field">${label}<textarea id="in-${inp.key}" placeholder="${esc(inp.placeholder||'')}"></textarea></div>`;
-  }
-  return `<div class="field">${label}<input id="in-${inp.key}" type="text" placeholder="${esc(inp.placeholder||'')}" /></div>`;
-}
-function collectInputs(){
-  const vals = {};
-  currentBranch.inputs.forEach(inp => {
-    const el = byId('in-' + inp.key);
-    vals[inp.key] = el ? el.value : '';
-  });
-  return vals;
-}
-function runBranch(e){
-  e.preventDefault();
-  const vals = collectInputs();
-  const out = byId('detail-output');
-  out.innerHTML = currentBranch.mock(vals);
-  // 完成后：按钮下沉，路径上结出小果实
-  const btn = byId('run-btn');
-  btn.disabled = true;
-  setTimeout(()=>{ byId('berry').classList.add('show'); }, 420);
-  // 结果保存到“我的枝间”
-  const summary = Object.values(vals).filter(v=>v).join(' · ').slice(0,60) || '（未填写）';
-  pushMemory({ kind:'usage', branch: currentBranch.name, slug: currentBranch.slug, body: summary });
-  toast('✓ 结果已保存到「我的枝间 · 记忆」');
-  out.scrollIntoView({behavior:'smooth', block:'nearest'});
-}
+          button.addEventListener(
+            "pointerup",
+            release
+          );
 
-/* ================= Request adaptation & Grow ================= */
-function openAdapt(){
-  showModal(`
-    <h3 class="text-emboss">Request adaptation</h3>
-    <p>告诉 Personalware：这个 Branch 哪里不适合你？提交后即视为“已转交 Personalware”定制。</p>
-    <div class="field">
-      <label>哪里不适合我</label>
-      <textarea id="adapt-text" placeholder="例如：我想让它支持日语输入；输出太长…"></textarea>
-    </div>
-    <div id="adapt-done"></div>
-    <div class="row">
-      <button class="btn btn-secondary" onclick="hideModal()">取消</button>
-      <button class="btn btn-primary" onclick="submitAdapt()">提交</button>
-    </div>
-  `);
-}
-function submitAdapt(){
-  const t = (byId('adapt-text').value || '').trim();
-  if(!t){ toast('请先写一句“哪里不适合我”'); return; }
-  pushMemory({ kind:'adaptation', branch: currentBranch ? currentBranch.name : '—', slug: currentBranch ? currentBranch.slug : '', body: t });
-  byId('adapt-done').innerHTML = '<span class="done-badge">✓ 已转交 Personalware</span>';
-  toast('已转交 Personalware');
-}
-function openGrow(){
-  showModal(`
-    <h3 class="text-emboss">Grow the first one</h3>
-    <p>没有匹配到现成的 Branch？提交你的新需求，它会成为一粒种子，在枝间生长。</p>
-    <div class="field">
-      <label>新需求</label>
-      <textarea id="grow-text" placeholder="描述你想被解决的那个小麻烦…"></textarea>
-    </div>
-    <div id="grow-done"></div>
-    <div class="row">
-      <button class="btn btn-secondary" onclick="hideModal()">取消</button>
-      <button class="btn btn-primary" onclick="submitGrow()">种下种子</button>
-    </div>
-  `);
-}
-function submitGrow(){
-  const t = (byId('grow-text').value || '').trim();
-  if(!t){ toast('请先描述你的新需求'); return; }
-  pushMemory({ kind:'seed', body: t });
-  byId('grow-done').innerHTML = '<span class="done-badge">🌱 已种下，成为 seed</span>';
-  toast('已保存为一粒种子');
-}
+          button.addEventListener(
+            "pointerleave",
+            () => {
+              button.classList.remove("is-pressed");
+            }
+          );
 
-/* ================= 匹配 ================= */
-function submitNeed(){
-  const want = (byId('want-input') ? byId('want-input').value : '').trim();
-  const dont = (byId('dont-input') ? byId('dont-input').value : '').trim();
-  if(!want){ toast('先告诉我：最近有什么小麻烦？'); byId('want-input').focus(); return; }
-  const btn = byId('bloom-btn');
-  btn.disabled = true;
-  matchBranch(want, dont).then(result => {
-    btn.disabled = false;
-    if(result && result.slug){
-      const branch = BRANCHES.find(b => b.slug === result.slug);
-      playTransition(branch, ()=> openBranch(branch.slug));
-      toast('🌿 为你找到：' + (branch ? branch.name : result.slug));
-    }else{
-      // 无匹配 → 反馈 Grow
-      playNoMatch();
+          button.addEventListener(
+            "pointercancel",
+            () => {
+              button.classList.remove("is-pressed");
+            }
+          );
+        });
     }
-  });
-}
-function localMatch(want, dont){
-  const text = (want + ' ' + dont).toLowerCase();
-  let best = null, bestScore = 0;
-  BRANCHES.forEach(b => {
-    let score = 0;
-    b.keywords.forEach(kw => { if(text.includes(kw.toLowerCase())) score += 1; });
-    if(text.includes(b.slug)) score += 3;
-    if(score > bestScore){ bestScore = score; best = b; }
-  });
-  return bestScore >= 1 ? { slug: best.slug, reason: '本地关键词匹配' } : null;
-}
-async function aiMatch(want, dont){
-  const s = getSettings();
-  const branchList = BRANCHES.map(b => `- ${b.slug}（${b.name}）：${b.problem}`).join('\n');
-  const prompt = `你是“枝间”的匹配器。根据用户需求，从以下 Branch 中选择最匹配的一个，只返回 JSON（不要多余文字）：{"slug":"<branch slug>","reason":"<一句话中文理由>"}。如果没有合适的，返回 {"slug":null,"reason":"无匹配"}。\n\nBranch 列表：\n${branchList}\n\n用户想要：${want}\n用户不想要：${dont}`;
-  const url = s.baseUrl.replace(/\/+$/,'') + '/chat/completions';
-  const resp = await fetch(url, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + s.apiKey },
-    body: JSON.stringify({ model: s.model, messages:[{role:'user', content: prompt}], temperature:0.3, response_format:{type:'json_object'} })
-  });
-  if(!resp.ok) throw new Error('HTTP ' + resp.status);
-  const data = await resp.json();
-  const content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-  const m = content.match(/\{[\s\S]*\}/);
-  const parsed = m ? JSON.parse(m[0]) : { slug:null };
-  return parsed;
-}
-async function matchBranch(want, dont){
-  const s = getSettings();
-  if(s.apiKey && s.apiKey.trim()){
-    try{ return await aiMatch(want, dont); }
-    catch(err){ console.warn('AI 匹配失败，回退本地匹配', err); }
-  }
-  return localMatch(want, dont);
-}
 
-/* ================= 无匹配 Grow ================= */
-function playNoMatch(){
-  showModal(`
-    <h3 class="text-emboss">🌱 还没有匹配的 Branch</h3>
-    <p>你的需求很新。提交它，让它在枝间成为一粒种子（seed），等待被看见、被领养、被造出来。</p>
-    <div class="field">
-      <label>新需求</label>
-      <textarea id="grow-text2" placeholder="描述你想被解决的那个小麻烦…"></textarea>
-    </div>
-    <div id="grow-done2"></div>
-    <div class="row">
-      <button class="btn btn-secondary" onclick="hideModal()">先逛逛花园</button>
-      <button class="btn btn-primary" onclick="submitGrow2()">Grow · 种下种子</button>
-    </div>
-  `);
-}
-function submitGrow2(){
-  const t = (byId('grow-text2').value || '').trim();
-  if(!t){ toast('请先描述你的新需求'); return; }
-  pushMemory({ kind:'seed', body: t });
-  byId('grow-done2').innerHTML = '<span class="done-badge">🌱 已种下，成为 seed</span>';
-  toast('已保存为一粒种子 · 可在「我的枝间 · 记忆」查看');
-}
+    /* =========================================================
+       ROUTER
+    ========================================================= */
 
-/* ================= 转场动画 ================= */
-function playTransition(branch, onDone){
-  const t = byId('transition');
-  const p = Object.assign({}, PALETTES[branch.palette], {id:'tbloom'});
-  const bloom = flowerSVG(p, {petals:6, seed:9, blur:1.4}).replace('<svg', '<svg class="t-bloom"');
-  // 颜料片花瓣
-  const colors = [p.outer, p.mid, p.inner, p.center1, p.center2];
-  let petals = '';
-  for(let i=0;i<14;i++){
-    const left = 20 + Math.random()*60;
-    const c = colors[i % colors.length];
-    const dx = (Math.random()*2 - 1) * 140;
-    const rot = (Math.random()*2 - 1) * 240;
-    const size = 14 + Math.random()*22;
-    const delay = Math.random()*0.25;
-    petals += `<span class="t-petal" style="left:${left}%; width:${size}px; height:${size*1.25}px; background:radial-gradient(closest-side, ${c}, transparent 75%); --dx:${dx}px; --rot:${rot}deg; animation-delay:${delay}s;"></span>`;
-  }
-  t.innerHTML = `
-    ${petals}
-    <svg class="t-stem-svg"><path d="M30 100 C 26 60, 36 28, 30 0" stroke="var(--stem-3)"/></svg>
-    <div style="position:absolute; left:50%; top:20%; transform:translate(-50%,-50%);">${bloom}</div>
-    <div class="t-caption">${esc(branch.name)}</div>`;
-  t.classList.remove('play');
-  void t.offsetWidth;
-  t.classList.add('play');
-  setTimeout(()=>{
-    t.classList.remove('play');
-    if(onDone) onDone();
-  }, 1550);
-}
+    function routeFromHash() {
+      const hash =
+        location.hash.replace("#", "");
 
-/* ================= 我的枝间 ================= */
-function switchTab(tab){
-  $$('.my-panel').forEach(p => p.classList.remove('active'));
-  $$('.my-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  byId('panel-' + tab).classList.add('active');
-  if(tab === 'memory') renderMemory();
-  if(tab === 'login') renderLoginState();
-}
-function loadSettings(){
-  const s = getSettings();
-  byId('set-provider').value = s.provider || 'deepseek';
-  byId('set-base').value = s.baseUrl;
-  byId('set-model').value = s.model;
-  byId('set-key').value = s.apiKey || '';
-}
-function saveSettings(){
-  const base = byId('set-base').value.trim();
-  const provider = byId('set-provider').value;
-  const defs = { deepseek:{baseUrl:'https://api.deepseek.com/v1', model:'deepseek-chat'}, openai:{baseUrl:'https://api.openai.com/v1', model:'gpt-4o-mini'}, custom:{baseUrl:'', model:''} };
-  const d = defs[provider];
-  const settings = {
-    provider,
-    baseUrl: base || d.baseUrl,
-    model: byId('set-model').value.trim() || d.model,
-    apiKey: byId('set-key').value.trim()
-  };
-  writeLS(LS_SETTINGS, settings);
-  toast('✓ 设置已保存');
-}
-function renderMemory(){
-  const list = byId('memory-list');
-  const m = getMemory();
-  if(!m.length){ list.innerHTML = '<div class="mem-empty">还没有记忆。<br>你在枝间留下的种子、定制转交与使用记录，都会在这里。</div>'; return; }
-  const kindLabel = { seed:'🌱 种子 · seed', adaptation:'🕊 定制转交 · Personalware', usage:'📜 使用记录' };
-  list.innerHTML = m.map(item => `
-    <div class="mem-item relief">
-      <div class="mem-kind">${kindLabel[item.kind] || item.kind}</div>
-      <div class="mem-body">${esc(item.body)}${item.branch ? '<span style="opacity:.7"> · ' + esc(item.branch) + '</span>' : ''}</div>
-      <div class="mem-time">${esc(item.time)}</div>
-    </div>`).join('');
-}
-function renderLoginState(){
-  const u = readLS(LS_USER, null);
-  byId('login-state').textContent = u ? '已登录（演示）：' + u.name : '未登录 · 不影响使用';
-}
-function doLogin(){
-  const name = byId('login-name').value.trim();
-  if(!name){ toast('请输入名字或邮箱'); return; }
-  writeLS(LS_USER, { name, at: Date.now() });
-  renderLoginState();
-  toast('✓ 登录成功（演示）');
-}
-function doLogout(){
-  localStorage.removeItem(LS_USER);
-  byId('login-name').value = '';
-  renderLoginState();
-  toast('已退出');
-}
+      if (!hash || hash === "home") {
+        state.view = "home";
+        return;
+      }
 
-/* ================= 模态 / Toast ================= */
-function showModal(html){
-  byId('modal-card').innerHTML = html;
-  byId('modal').classList.add('show');
-}
-function hideModal(){ byId('modal').classList.remove('show'); }
-byId('modal').addEventListener('click', e=>{ if(e.target === byId('modal')) hideModal(); });
+      if (hash === "branches") {
+        state.view = "branches";
+        return;
+      }
 
-let toastTimer = null;
-function toast(msg){
-  const t = byId('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> t.classList.remove('show'), 2600);
-}
+      if (hash === "mine") {
+        state.view = "mine";
+        return;
+      }
 
-/* ================= 伪二维码 ================= */
-function drawQR(){
-  const qr = byId('qr');
-  if(!qr) return;
-  const n = 11, cells = [];
-  let rnd = 42;
-  const rand = () => (rnd = (rnd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-  for(let y=0;y<n;y++){
-    for(let x=0;x<n;x++){
-      const inFinder = (x<3&&y<3)||(x>n-4&&y<3)||(x<3&&y>n-4);
-      const dark = inFinder ? ((x===1&&y===1)||(x===n-2&&y===1)||(x===1&&y===n-2) ? false : (x===0||x===2||y===0||y===2)) : rand() > 0.55;
-      if(dark) cells.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="#405838"/>`);
+      if (hash === "grow") {
+        state.view = "grow";
+        return;
+      }
+
+      if (hash.startsWith("branch/")) {
+        const slug = hash.split("/")[1];
+
+        state.view = "branch";
+        state.currentSlug = slug;
+        return;
+      }
+
+      state.view = "home";
     }
-  }
-  qr.innerHTML = `<svg viewBox="0 0 ${n} ${n}" width="100%" height="100%" shape-rendering="crispEdges">${cells.join('')}</svg>`;
-}
 
-/* ================= 初始化 ================= */
-drawOpeningFlower();
-drawGarden();
-loadSettings();
-renderMemory();
-renderLoginState();
-</script>
+    window.addEventListener(
+      "hashchange",
+      () => {
+        routeFromHash();
+        render();
+      }
+    );
+
+    /* =========================================================
+       RENDER
+    ========================================================= */
+
+    function render() {
+
+      if (state.view === "home") {
+        app.innerHTML = homeView();
+      }
+
+      else if (state.view === "matching") {
+        app.innerHTML = matchingView();
+      }
+
+      else if (state.view === "branches") {
+        app.innerHTML = branchesView();
+      }
+
+      else if (state.view === "branch") {
+        app.innerHTML =
+          branchView(
+            getBranch(state.currentSlug)
+          );
+      }
+
+      else if (state.view === "grow") {
+        app.innerHTML = growView();
+      }
+
+      else if (state.view === "mine") {
+        app.innerHTML = mineView();
+      }
+
+      installTactileListeners();
+    }
+
+    routeFromHash();
+    render();
+
+    /* Make handlers visible to inline HTML events */
+    window.go = go;
+    window.fillNeed = fillNeed;
+    window.submitNeed = submitNeed;
+    window.runBranch = runBranch;
+    window.toggleSave = toggleSave;
+    window.toggleAdaptation = toggleAdaptation;
+    window.submitAdaptation = submitAdaptation;
+    window.growSeed = growSeed;
+    window.setMineTab = setMineTab;
+    window.saveSettings = saveSettings;
+
+  </script>
 </body>
 </html>
