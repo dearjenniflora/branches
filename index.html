@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>枝间 ZHIJIAN — Branch 的承载、发现与匹配</title>
+<style>
+/* ============================================================
+   枝间 ZHIJIAN · Monet-inspired oil painting + soft embossed UI
+   ============================================================ */
+:root{
+  /* 产品原有配色 */
+  --bg-1:#FCEAE2; --bg-2:#CCEBF5; --bg-3:#F5E6E9;
+  --cream-1:#F0F0C8; --cream-2:#FFFECC; --cream-3:#EED9BE;
+  --ink:#405838; --ink-soft:#5d6b4e;
+  --stem-1:#405838; --stem-2:#989058; --stem-3:#90A868;
+  --pink-1:#F1BEC5; --pink-2:#EF8E9D; --pink-3:#F9D8CC;
+  --blue-1:#80B0D8; --blue-2:#98C0E8; --blue-3:#CCEBF5;
+  --green-1:#80B0A8; --green-2:#90B080; --green-3:#D8F6CA;
+  --yellow-1:#F0C030; --yellow-2:#E8D078; --yellow-3:#FFFFBF;
+  --danger:#EF8E9D; --danger-2:#F28689;
+  --lilac:#C0C0D8;
+  --shadow-warm: rgba(152,144,88,.28);
+  --shadow-cool: rgba(128,176,168,.25);
+  --shadow-ink: rgba(64,88,56,.10);
+  --light: rgba(255,255,255,.75);
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{
+  font-family:"PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  display:flex; flex-direction:column;
+  overflow-x:hidden;
+}
+
+/* ============ 01 · 背景材质：莫奈式画布 ============ */
+.canvas-bg{
+  position:fixed; inset:0; z-index:-4; overflow:hidden;
+  /* 柔和的大半径径向晕染，模拟颜料在空气中的扩散 */
+  background:
+    radial-gradient(120% 90% at 12% 6%,  rgba(204,235,245,.92), transparent 55%),
+    radial-gradient(130% 100% at 90% 10%, rgba(245,230,233,.95), transparent 60%),
+    radial-gradient(115% 95% at 82% 92%, rgba(252,234,226,.95), transparent 56%),
+    radial-gradient(100% 100% at 16% 94%, rgba(240,240,200,.65), transparent 55%),
+    radial-gradient(60% 40% at 50% 40%, rgba(255,254,204,.35), transparent 70%),
+    #FCEAE2;
+}
+/* 油画笔触噪点：fractalNoise + 高斯模糊 → 手绘质感 */
+.canvas-grain{
+  position:fixed; inset:0; z-index:-3; pointer-events:none;
+  opacity:.9; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006 0.012' numOctaves='4' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeGaussianBlur stdDeviation='1.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.5'/%3E%3C/svg%3E");
+  filter:blur(.2px);
+}
+/* 边缘较明显的笔触 */
+.edge-strokes{ position:fixed; inset:0; z-index:-2; pointer-events:none; }
+.edge-strokes i{
+  position:absolute; border-radius:50%; filter:blur(26px); opacity:.38; display:block;
+}
+.edge-strokes i:nth-child(1){ width:46vw; height:38vh; left:-14vw; top:-10vh; background:radial-gradient(closest-side, rgba(128,176,216,.55), transparent 70%); transform:rotate(-18deg); }
+.edge-strokes i:nth-child(2){ width:42vw; height:34vh; right:-12vw; top:6vh; background:radial-gradient(closest-side, rgba(241,190,197,.6), transparent 70%); transform:rotate(14deg); }
+.edge-strokes i:nth-child(3){ width:48vw; height:30vh; left:-6vw; bottom:-8vh; background:radial-gradient(closest-side, rgba(144,168,104,.5), transparent 72%); transform:rotate(10deg); }
+.edge-strokes i:nth-child(4){ width:40vw; height:32vh; right:-10vw; bottom:12vh; background:radial-gradient(closest-side, rgba(240,192,48,.4), transparent 72%); transform:rotate(-12deg); }
+
+/* ============ 02 · 浮雕材质 ============ */
+.relief{
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.62), rgba(255,255,255,0) 46%),
+    linear-gradient(325deg, rgba(152,144,88,.13), rgba(255,255,255,0) 62%),
+    linear-gradient(0deg, var(--cream-1), var(--cream-2));
+  box-shadow:
+    0 1px 1px var(--shadow-ink),
+    3px 5px 12px var(--shadow-warm),
+    -3px -4px 10px var(--light),
+    inset 0 1px 0 rgba(255,255,255,.65);
+  border:1px solid rgba(255,255,255,.28);
+}
+.inset-relief{
+  background:
+    linear-gradient(180deg, rgba(152,144,88,.10), rgba(255,255,255,.28)),
+    var(--cream-2);
+  box-shadow:
+    inset 2px 3px 8px var(--shadow-warm),
+    inset -2px -3px 8px var(--light);
+  border:1px solid rgba(152,144,88,.08);
+}
+.inset-relief:focus{
+  outline:none;
+  box-shadow:
+    inset 2px 3px 8px var(--shadow-warm),
+    inset -2px -3px 8px var(--light),
+    0 0 0 4px rgba(128,176,216,.10),
+    0 0 24px rgba(241,190,197,.40),
+    0 0 34px rgba(128,176,216,.18);
+}
+.surface{ /* 整页唯一大型 cream relief surface */
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,0) 48%),
+    linear-gradient(320deg, rgba(152,144,88,.10), rgba(255,255,255,0) 58%),
+    linear-gradient(0deg, rgba(240,240,200,.55), rgba(255,254,204,.55));
+  box-shadow:
+    0 2px 3px var(--shadow-ink),
+    6px 9px 26px var(--shadow-warm),
+    -6px -7px 20px var(--light),
+    inset 0 1px 0 rgba(255,255,255,.6);
+  border:1px solid rgba(255,255,255,.30);
+  border-radius:26px;
+}
+
+/* ============ 03 · 文字浮雕 ============ */
+.text-emboss{
+  color:var(--ink);
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.9),
+    0 -1px 1px rgba(64,88,56,.30);
+}
+.text-emboss-soft{
+  color:var(--ink);
+  text-shadow:0 1px 0 rgba(255,255,255,.8);
+}
+
+/* ============ 04 · 植物 ============ */
+.stem-path{ fill:none; stroke-linecap:round; }
+.flower-svg{ display:block; overflow:visible; }
+.flower-svg .petal{ transform-origin:50px 50px; }
+.sway{ animation:sway 7s ease-in-out infinite; transform-origin:bottom center; }
+@keyframes sway{ 0%,100%{ transform:rotate(var(--sway,0deg));} 50%{ transform:rotate(calc(var(--sway,0deg) + 1.4deg));} }
+
+/* ============ 05 · 按钮 ============ */
+.btn{
+  font-family:inherit; cursor:pointer; border:none; border-radius:999px;
+  font-size:14px; letter-spacing:.04em; color:var(--ink);
+  transition:transform .22s var(--ease), box-shadow .22s var(--ease), background .22s var(--ease);
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-primary{
+  padding:12px 26px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.65), rgba(255,255,255,0) 46%),
+    linear-gradient(325deg, rgba(152,144,88,.16), rgba(255,255,255,0) 60%),
+    linear-gradient(0deg, var(--cream-1), var(--cream-2));
+  box-shadow:
+    0 2px 3px var(--shadow-ink),
+    4px 6px 14px var(--shadow-warm),
+    -4px -5px 12px var(--light),
+    inset 0 1px 0 rgba(255,255,255,.7);
+  border:1px solid rgba(255,255,255,.34);
+  font-weight:600;
+}
+.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 4px 6px var(--shadow-ink), 6px 9px 18px var(--shadow-warm), -5px -6px 14px var(--light), inset 0 1px 0 rgba(255,255,255,.7); }
+.btn-primary:active{ transform:translateY(1px); box-shadow:inset 2px 3px 8px var(--shadow-warm), inset -2px -3px 8px var(--light); }
+.btn-primary[disabled]{ opacity:.55; cursor:not-allowed; }
+.btn-secondary{
+  padding:11px 22px;
+  background:linear-gradient(0deg, rgba(240,240,200,.30), rgba(255,254,204,.45));
+  box-shadow:
+    inset 0 0 0 1px rgba(152,144,88,.10),
+    0 1px 2px var(--shadow-ink),
+    2px 3px 8px rgba(152,144,88,.14),
+    -2px -3px 8px var(--light);
+}
+.btn-secondary:hover{ transform:translateY(-1px); box-shadow:inset 0 0 0 1px rgba(152,144,88,.16), 0 2px 3px var(--shadow-ink), 3px 5px 12px rgba(152,144,88,.18), -3px -4px 10px var(--light); }
+.btn-secondary:active{ transform:translateY(1px); box-shadow:inset 2px 3px 7px var(--shadow-warm), inset -2px -3px 7px var(--light); }
+.btn-ghost{ background:transparent; padding:8px 14px; color:var(--ink-soft); box-shadow:none; font-size:13px; }
+.btn-ghost:hover{ color:var(--ink); text-shadow:0 1px 0 rgba(255,255,255,.8); }
+
+/* ============ 06 · 输入 ============ */
+.field{ display:flex; flex-direction:column; gap:7px; margin-bottom:16px; }
+.field label{ font-size:12.5px; letter-spacing:.06em; color:var(--ink-soft); text-shadow:0 1px 0 rgba(255,255,255,.7); }
+.field input,.field textarea,.field select{
+  font-family:inherit; font-size:15px; color:var(--ink);
+  padding:12px 16px; border-radius:16px;
+  background:linear-gradient(180deg, rgba(152,144,88,.09), rgba(255,255,255,.30)), var(--cream-2);
+  box-shadow:inset 2px 3px 8px var(--shadow-warm), inset -2px -3px 8px var(--light);
+  border:1px solid rgba(152,144,88,.08);
+  transition:box-shadow .25s var(--ease);
+}
+.field input:focus,.field textarea:focus,.field select:focus{
+  outline:none;
+  box-shadow:inset 2px 3px 8px var(--shadow-warm), inset -2px -3px 8px var(--light),
+    0 0 0 4px rgba(128,176,216,.10), 0 0 22px rgba(241,190,197,.36), 0 0 30px rgba(128,176,216,.16);
+}
+.field textarea{ resize:vertical; min-height:96px; line-height:1.6; }
+.field input::placeholder,.field textarea::placeholder{ color:rgba(64,88,56,.42); }
+.field select{ appearance:none; -webkit-appearance:none;
+  background-image:linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position:calc(100% - 20px) 50%, calc(100% - 14px) 50%;
+  background-size:6px 6px; background-repeat:no-repeat;
+}
+
+/* ============ 布局 ============ */
+nav{
+  position:relative; z-index:30;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px clamp(16px,4vw,34px);
+  background:linear-gradient(180deg, rgba(252,234,226,.72), rgba(252,234,226,0));
+}
+.brand{ display:flex; align-items:baseline; gap:10px; cursor:pointer; user-select:none; }
+.brand .logo{ font-size:19px; font-weight:700; letter-spacing:.18em; }
+.brand .brand-sub{ font-size:10.5px; letter-spacing:.22em; color:var(--ink-soft); text-transform:uppercase; }
+.nav-links{ display:flex; gap:6px; }
+.nav-links button{
+  font-family:inherit; font-size:13.5px; letter-spacing:.05em; color:var(--ink-soft);
+  background:transparent; border:none; cursor:pointer; padding:8px 14px; border-radius:999px;
+  transition:background .2s, box-shadow .2s, color .2s; -webkit-tap-highlight-color:transparent;
+}
+.nav-links button:hover{ color:var(--ink); }
+.nav-links button.active{
+  color:var(--ink); font-weight:600;
+  background:linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,0) 50%), rgba(240,240,200,.5);
+  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.16), -2px -3px 8px var(--light), inset 0 1px 0 rgba(255,255,255,.6);
+}
+
+main{ position:relative; flex:1; overflow:hidden; }
+.view{
+  position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+  opacity:0; pointer-events:none; filter:blur(10px) saturate(.92);
+  transition:opacity .5s var(--ease), filter .5s var(--ease);
+}
+.view.active{ opacity:1; pointer-events:auto; filter:blur(0) saturate(1); }
+.container{ width:min(1060px, 92vw); margin:0 auto; padding:22px 0 72px; }
+
+/* ============ Opening ============ */
+.opening{ text-align:center; padding-top:clamp(18px,6vh,64px); }
+.slogan{ font-size:clamp(30px,6vw,52px); font-weight:700; letter-spacing:.06em; }
+.slogan-sub{ margin-top:12px; font-size:clamp(14px,2.6vw,17px); color:var(--ink-soft); letter-spacing:.08em; text-shadow:0 1px 0 rgba(255,255,255,.7); }
+.opening-flower{
+  position:relative; width:min(380px,80vw); height:min(380px,80vw);
+  margin:clamp(16px,4vh,34px) auto 0; transition:transform 1.3s var(--ease), filter 1.3s var(--ease);
+}
+.opening-flower svg{ position:absolute; inset:0; width:100%; height:100%; }
+.opening-flower.typing{ transform:scale(1.045); filter:saturate(1.2) blur(1.1px); }
+.flower-core{
+  position:absolute; left:50%; top:52%; transform:translate(-50%,-50%);
+  width:58%; z-index:3; display:flex; flex-direction:column; gap:9px;
+}
+.flower-core label{ font-size:12px; letter-spacing:.2em; color:var(--ink-soft); text-shadow:0 1px 0 rgba(255,255,255,.7); }
+.flower-core input{
+  font-family:inherit; font-size:16px; color:var(--ink); text-align:center;
+  padding:15px 16px; border-radius:999px;
+  background:linear-gradient(180deg, rgba(152,144,88,.12), rgba(255,255,255,.32)), rgba(255,254,204,.82);
+  box-shadow:inset 3px 4px 10px rgba(152,144,88,.32), inset -3px -4px 10px rgba(255,255,255,.75);
+  border:1px solid rgba(152,144,88,.06); transition:box-shadow .25s var(--ease);
+}
+.flower-core input:focus{
+  outline:none;
+  box-shadow:inset 3px 4px 10px rgba(152,144,88,.32), inset -3px -4px 10px rgba(255,255,255,.75),
+    0 0 26px rgba(241,190,197,.55), 0 0 36px rgba(128,176,216,.25);
+}
+.flower-core input::placeholder{ color:rgba(64,88,56,.44); }
+.want-bar{
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:12px;
+  margin-top:clamp(6px,2vh,18px);
+}
+.want-bar .inset-relief{ flex:1 1 260px; max-width:420px; font-family:inherit; font-size:15px; color:var(--ink); padding:13px 18px; border-radius:999px; }
+.want-bar .inset-relief::placeholder{ color:rgba(64,88,56,.42); }
+.hint{ margin-top:16px; font-size:12.5px; color:var(--ink-soft); letter-spacing:.05em; opacity:.85; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+
+/* ============ Branches 花园 ============ */
+.garden-head{ text-align:center; padding-top:clamp(10px,3vh,30px); }
+.garden-head h1{ font-size:clamp(24px,4.5vw,36px); letter-spacing:.08em; }
+.garden-head p{ margin-top:8px; color:var(--ink-soft); font-size:14px; letter-spacing:.06em; }
+.garden{ position:relative; height:min(72vh,760px); margin-top:8px; }
+.plant{ position:absolute; bottom:4%; width:180px; height:100%; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.plant .stem-wrap{ position:absolute; bottom:0; left:50%; transform:translateX(-50%); height:100%; width:90px; }
+.plant .stem-wrap svg{ width:100%; height:100%; overflow:visible; }
+.plant .flower-wrap{ position:absolute; top:calc(100% - var(--fh, 0px)); left:50%; transform:translateX(-50%); transition:transform .4s var(--ease); }
+.plant:hover .flower-wrap{ transform:translateX(-50%) translateY(-4px); }
+.plant .branch-tag{
+  position:absolute; left:50%; transform:translate(-50%,-6px); top:calc(100% - var(--fh,0px) + 14px);
+  white-space:nowrap; font-size:12.5px; letter-spacing:.05em; color:var(--ink);
+  padding:7px 14px; border-radius:999px; opacity:0; pointer-events:none;
+  background:linear-gradient(145deg, rgba(255,255,255,.6), rgba(255,255,255,0) 50%), rgba(240,240,200,.82);
+  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.16), -2px -3px 8px var(--light), inset 0 1px 0 rgba(255,255,255,.6);
+  transition:opacity .25s var(--ease), transform .25s var(--ease);
+}
+.plant:hover .branch-tag{ opacity:1; transform:translate(-50%,0); }
+.plant .branch-name-m{ position:absolute; left:50%; transform:translateX(-50%); bottom:-8px; font-size:11px; color:var(--ink-soft); opacity:.65; }
+
+/* ============ Detail ============ */
+.back-link{ margin-bottom:14px; }
+.detail-head{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
+.detail-head .flower-mini{ flex:0 0 auto; }
+.detail-head .meta{ min-width:0; }
+.branch-tag-text{ font-size:11px; letter-spacing:.24em; color:var(--ink-soft); text-transform:uppercase; margin-bottom:6px; }
+.detail-head h1{ font-size:clamp(24px,4.6vw,38px); letter-spacing:.04em; }
+.detail-problem{ margin-top:10px; font-size:15px; color:var(--ink-soft); line-height:1.7; max-width:620px; text-shadow:0 1px 0 rgba(255,255,255,.6); }
+.detail-surface{ padding:clamp(18px,3.5vw,34px); }
+.detail-surface h3{ font-size:13px; letter-spacing:.18em; color:var(--ink-soft); margin-bottom:18px; font-weight:600; }
+.detail-actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; justify-content:center; }
+.berry-path{ position:relative; margin-top:20px; height:36px; display:flex; align-items:center; justify-content:center; }
+.berry{
+  width:14px; height:14px; border-radius:50%; opacity:0; transform:scale(0);
+  background:radial-gradient(circle at 34% 30%, #FFFECC, var(--berry,#90A868) 62%, #405838);
+  box-shadow:0 1px 3px var(--shadow-ink), 2px 3px 6px rgba(152,144,88,.3);
+  transition:opacity .5s var(--ease), transform .5s var(--ease);
+}
+.berry.show{ opacity:1; transform:scale(1); }
+
+/* ============ 我的枝间 ============ */
+.my-tabs{ display:flex; gap:8px; justify-content:center; margin-bottom:24px; flex-wrap:wrap; }
+.my-panel{ display:none; }
+.my-panel.active{ display:block; animation:fadeup .45s var(--ease); }
+@keyframes fadeup{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none;} }
+.settings-card{ max-width:560px; margin:0 auto; padding:26px; }
+.settings-card .note{ font-size:12.5px; color:var(--ink-soft); line-height:1.7; margin-bottom:18px; }
+.memory-list{ display:flex; flex-direction:column; gap:14px; max-width:640px; margin:0 auto; }
+.mem-item{ padding:16px 20px; border-radius:18px; }
+.mem-item .mem-kind{ font-size:10.5px; letter-spacing:.2em; color:var(--ink-soft); text-transform:uppercase; }
+.mem-item .mem-body{ margin-top:8px; font-size:14.5px; line-height:1.65; }
+.mem-item .mem-time{ margin-top:8px; font-size:11.5px; color:var(--ink-soft); opacity:.8; }
+.mem-empty{ text-align:center; color:var(--ink-soft); padding:34px 0; font-size:14px; letter-spacing:.05em; }
+
+/* ============ 模态 ============ */
+.modal-mask{
+  position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; padding:20px;
+  background:radial-gradient(circle at 50% 45%, rgba(252,234,226,.55), rgba(252,234,226,.88));
+  backdrop-filter:blur(6px);
+}
+.modal-mask.show{ display:flex; }
+.modal-card{
+  width:min(460px,92vw); padding:28px; border-radius:26px;
+  animation:fadeup .4s var(--ease);
+}
+.modal-card h3{ font-size:18px; letter-spacing:.04em; margin-bottom:6px; }
+.modal-card p{ font-size:13px; color:var(--ink-soft); line-height:1.6; margin-bottom:16px; }
+.modal-card .row{ display:flex; gap:10px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap; }
+.done-badge{
+  display:inline-flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink);
+  padding:10px 16px; border-radius:999px; margin-top:6px;
+  background:linear-gradient(145deg, rgba(255,255,255,.6), rgba(255,255,255,0) 50%), rgba(216,246,202,.7);
+  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(144,168,104,.22), -2px -3px 8px var(--light);
+}
+
+/* ============ 转场：开花 ============ */
+.transition{
+  position:fixed; inset:0; z-index:50; display:none; overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 50% 30%, rgba(255,254,204,.5), transparent 55%),
+    radial-gradient(110% 100% at 50% 100%, rgba(240,240,200,.4), transparent 60%),
+    rgba(252,234,226,.9);
+  backdrop-filter:blur(4px);
+}
+.transition.play{ display:block; }
+.t-stem-svg{ position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:60px; height:64vh; }
+.t-stem-svg path{ stroke:var(--stem-3); stroke-width:2.4; stroke-dasharray:700; stroke-dashoffset:700; }
+.transition.play .t-stem-svg path{ animation:stemDraw .7s .1s var(--ease) forwards; }
+@keyframes stemDraw{ to{ stroke-dashoffset:0; } }
+.t-bloom{ position:absolute; left:50%; top:20%; transform:translate(-50%,-50%); }
+.t-bloom .petal{ opacity:0; }
+.transition.play .t-bloom .petal{ animation:bloomPetal .62s .62s var(--ease) forwards; }
+@keyframes bloomPetal{ 0%{ opacity:0; transform:scale(0);} 100%{ opacity:1; transform:scale(1);} }
+.t-bloom .bloom-core{ opacity:0; transform:scale(0); }
+.transition.play .t-bloom .bloom-core{ animation:bloomPetal .5s .9s var(--ease) forwards; }
+.t-petal{
+  position:absolute; border-radius:50%; filter:blur(3px); opacity:0; top:22%;
+}
+.transition.play .t-petal{ animation:petalFall 1s var(--ease) forwards; }
+@keyframes petalFall{
+  0%{ opacity:.9; transform:translate(0,0) rotate(0deg) scale(1);}
+  100%{ opacity:0; transform:translate(var(--dx,20px),62vh) rotate(var(--rot,180deg)) scale(.6);}
+}
+.t-caption{
+  position:absolute; left:50%; top:calc(20% + 110px); transform:translate(-50%,0);
+  font-size:15px; letter-spacing:.12em; color:var(--ink); opacity:0;
+}
+.transition.play .t-caption{ animation:fadeup .5s 1.02s var(--ease) forwards; }
+
+/* ============ Toast ============ */
+.toast{
+  position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); z-index:80;
+  font-size:13.5px; letter-spacing:.05em; color:var(--ink); padding:11px 20px; border-radius:999px; opacity:0; pointer-events:none;
+  background:linear-gradient(145deg, rgba(255,255,255,.65), rgba(255,255,255,0) 50%), rgba(255,254,204,.9);
+  box-shadow:0 2px 3px var(--shadow-ink), 4px 6px 16px rgba(152,144,88,.3), -4px -5px 12px var(--light), inset 0 1px 0 rgba(255,255,255,.7);
+  transition:opacity .3s var(--ease), transform .3s var(--ease);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ============ mock 输出 ============ */
+.mock{ animation:fadeup .5s var(--ease); margin-top:20px; }
+.mock .mock-label{ font-size:13px; letter-spacing:.12em; color:var(--ink-soft); margin-bottom:4px; }
+.mock .mock-note{ font-size:12px; color:var(--ink-soft); opacity:.8; margin-bottom:16px; }
+.rpg-map{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:14px 0; }
+.rpg-node{
+  padding:12px 14px; border-radius:14px; font-size:13.5px; line-height:1.5;
+  background:linear-gradient(145deg, rgba(255,255,255,.5), rgba(255,255,255,0) 50%), rgba(240,240,200,.55);
+  box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.14), -2px -3px 8px var(--light);
+}
+blockquote{ margin:14px 0; padding:12px 18px; border-left:3px solid var(--stem-3); font-size:14.5px; line-height:1.8; color:var(--ink); background:rgba(255,255,255,.25); border-radius:0 14px 14px 0; }
+.keep{ font-size:13px; color:var(--ink-soft); margin-top:10px; }
+.pipeline{ display:flex; flex-direction:column; gap:8px; margin:14px 0; }
+.pipe-step{ display:flex; align-items:center; gap:12px; font-size:14px; padding:10px 14px; border-radius:14px; background:rgba(255,255,255,.25); }
+.pipe-step .dot{ width:10px; height:10px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #FFFECC, var(--stem-3) 70%); box-shadow:0 0 0 3px rgba(144,168,104,.16); flex:0 0 auto; }
+.checklist{ display:flex; flex-direction:column; gap:2px; margin:12px 0; }
+.checklist label{ display:flex; align-items:center; gap:12px; font-size:14.5px; padding:9px 12px; border-radius:12px; cursor:pointer; transition:background .2s; }
+.checklist label:hover{ background:rgba(255,255,255,.3); }
+.checklist input{ width:18px; height:18px; accent-color:var(--stem-1); }
+.checklist .done{ text-decoration:line-through; color:var(--ink-soft); }
+.disclaimer{ margin-top:14px; font-size:12px; color:var(--danger-2); letter-spacing:.04em; }
+.anon-box{ display:flex; gap:20px; align-items:center; flex-wrap:wrap; margin:14px 0; }
+.anon-link{ font-size:15px; font-weight:600; letter-spacing:.03em; }
+.qr{ width:96px; height:96px; padding:8px; border-radius:14px; background:#FFFECC; box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.18); }
+.answer-card{ margin-top:14px; padding:14px 18px; border-radius:16px; background:linear-gradient(145deg, rgba(255,255,255,.55), rgba(255,255,255,0) 50%), rgba(240,240,200,.6); box-shadow:0 1px 2px var(--shadow-ink), 2px 3px 8px rgba(152,144,88,.16); font-size:14px; line-height:1.7; }
+.chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.chip{ font-size:12px; padding:5px 12px; border-radius:999px; background:rgba(255,255,255,.35); box-shadow:inset 0 0 0 1px rgba(152,144,88,.12); }
+
+@media (max-width:640px){
+  .brand .brand-sub{ display:none; }
+  .nav-links button{ padding:7px 10px; font-size:12.5px; }
+  .garden{ height:min(66vh,600px); }
+  .plant{ width:120px; }
+  .detail-head{ gap:12px; }
+}
+</style>
+</head>
+<body>
+  <div class="canvas-bg"></div>
+  <div class="canvas-grain"></div>
+  <div class="edge-strokes"><i></i><i></i><i></i><i></i></div>
+
+  <nav>
+    <div class="brand" onclick="go('opening')">
+      <span class="logo text-emboss">枝间 ZHIJIAN</span>
+      <span class="brand-sub">Branches</span>
+    </div>
+    <div class="nav-links">
+      <button data-nav="opening" class="active" onclick="go('opening')">首页</button>
+      <button data-nav="branches" onclick="go('branches')">BRANCHES</button>
+      <button data-nav="my" onclick="go('my')">我的枝间</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ============ 首页 / Opening ============ -->
+    <section id="view-opening" class="view active">
+      <div class="container opening">
+        <h1 class="slogan text-emboss">看见你的需求</h1>
+        <p class="slogan-sub">造好的 Branch，在这里被看见、被找到、被使用、被领养。</p>
+
+        <div class="opening-flower" id="opening-flower"></div>
+
+        <div class="want-bar">
+          <input id="dont-input" class="inset-relief" type="text" placeholder="不想要什么（可选）：例如别太正式、不要代码…" />
+          <button class="btn btn-primary" id="bloom-btn" onclick="submitNeed()">让枝间开花 →</button>
+        </div>
+        <p class="hint">枝间不生成 App、不修改 App —— 它只负责把造好的 Branch 匹配给需要它的人。</p>
+      </div>
+    </section>
+
+    <!-- ============ BRANCHES 花园 ============ -->
+    <section id="view-branches" class="view">
+      <div class="container">
+        <div class="garden-head">
+          <h1 class="text-emboss">花园 · BRANCHES</h1>
+          <p>每一朵花，都是一个被造好的 Branch。轻触，领养它。</p>
+        </div>
+        <div class="garden" id="garden"></div>
+      </div>
+    </section>
+
+    <!-- ============ Branch Detail ============ -->
+    <section id="view-detail" class="view">
+      <div class="container">
+        <button class="btn btn-ghost back-link" onclick="go('branches')">← 回到花园</button>
+        <div class="detail-head">
+          <div class="flower-mini" id="detail-flower"></div>
+          <div class="meta">
+            <div class="branch-tag-text" id="detail-tag"></div>
+            <h1 class="text-emboss" id="detail-name"></h1>
+            <p class="detail-problem" id="detail-problem"></p>
+          </div>
+        </div>
+        <div class="surface detail-surface">
+          <h3>INPUTS · 告诉我你的情况</h3>
+          <form id="detail-form" onsubmit="runBranch(event)">
+            <div id="detail-inputs"></div>
+            <button class="btn btn-primary" type="submit" id="run-btn">运行 Branch</button>
+          </form>
+          <div id="detail-output"></div>
+          <div class="berry-path"><div class="berry" id="berry"></div></div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-secondary" onclick="openAdapt()">Request adaptation · 哪里不适合我</button>
+          <button class="btn btn-secondary" onclick="openGrow()">Grow the first one · 提交新需求</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 我的枝间 ============ -->
+    <section id="view-my" class="view">
+      <div class="container">
+        <div class="garden-head" style="padding-top:0;">
+          <h1 class="text-emboss">我的枝间</h1>
+          <p>设置 · 记忆 · 登录</p>
+        </div>
+        <div class="my-tabs">
+          <button class="btn btn-secondary active" data-tab="settings" onclick="switchTab('settings')">设置</button>
+          <button class="btn btn-secondary" data-tab="memory" onclick="switchTab('memory')">记忆</button>
+          <button class="btn btn-secondary" data-tab="login" onclick="switchTab('login')">登录</button>
+        </div>
+
+        <div class="my-panel active" id="panel-settings">
+          <div class="surface settings-card">
+            <div class="note">
+              枝间使用你在下方选择的模型来理解需求并匹配 Branch。未配置 API Key 时，将使用<b>本地关键词匹配</b>，仍可点开即用。
+            </div>
+            <div class="field">
+              <label>服务商</label>
+              <select id="set-provider">
+                <option value="deepseek">DeepSeek V4 Flash（默认）</option>
+                <option value="openai">OpenAI 兼容</option>
+                <option value="custom">自定义</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Base URL</label>
+              <input id="set-base" type="text" placeholder="https://api.deepseek.com/v1" />
+            </div>
+            <div class="field">
+              <label>模型</label>
+              <input id="set-model" type="text" placeholder="deepseek-chat" />
+            </div>
+            <div class="field">
+              <label>API Key（可选）</label>
+              <input id="set-key" type="password" placeholder="sk-…" autocomplete="off" />
+            </div>
+            <div class="row" style="display:flex;justify-content:flex-end;gap:10px;">
+              <button class="btn btn-secondary" onclick="loadSettings()">重置默认</button>
+              <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="my-panel" id="panel-memory">
+          <div class="memory-list" id="memory-list"></div>
+        </div>
+
+        <div class="my-panel" id="panel-login">
+          <div class="surface settings-card">
+            <p class="note">登录为可选功能。枝间 MVP 阶段坚持 0 注册、0 安装、点开即用；这里仅作演示占位。</p>
+            <div class="field">
+              <label>名字 / 邮箱（演示）</label>
+              <input id="login-name" type="text" placeholder="你的名字或邮箱" />
+            </div>
+            <div id="login-state" style="margin-bottom:12px;font-size:13.5px;color:var(--ink-soft);"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="doLogin()">登录（演示）</button>
+              <button class="btn btn-secondary" onclick="doLogout()">退出</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 转场：花瓣散开 → 落向底部 → 枝条生长 → 开花 -->
+  <div class="transition" id="transition"></div>
+
+  <!-- 模态 -->
+  <div class="modal-mask" id="modal">
+    <div class="modal-card relief" id="modal-card"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ================= 数据 ================= */
+const BRANCHES = [
+  {
+    slug:'teach-me-like-this',
+    name:'Teach Me Like This',
+    tag:'KNOWLEDGE BRANCH',
+    palette:'blue',
+    berry:'#80B0D8',
+    problem:'我有一篇必须读、但完全看不进去的论文。',
+    keywords:['论文','paper','读','阅读','理解','解释','学习','看不懂','rpg','文献','抽象','研究'],
+    inputs:[
+      {key:'text', label:'粘贴文本', type:'textarea', placeholder:'把你看不进去的那篇论文 / 文章贴进来…'},
+      {key:'style', label:'选择理解方式', type:'select', options:['温迪口吻 + RPG 世界地图','幼儿园老师 + 童话故事','老教授 + 一堂讲座','好朋友 + 深夜聊天']}
+    ],
+    mock: v => {
+      const style = v.style || '温迪口吻 + RPG 世界地图';
+      return `<div class="mock">
+        <p class="mock-label">理解方式 · ${style}</p>
+        <p class="mock-note">mock 演示 · 已保留关键英文原文</p>
+        <div class="rpg-map">
+          <div class="rpg-node">🧭 <b>Abstract</b><br>出发营地，认识这篇论文要解决的问题</div>
+          <div class="rpg-node">🗺️ <b>Method</b><br>通往主城的小径（作者怎么做的）</div>
+          <div class="rpg-node">⛰️ <b>Experiments</b><br>一路打怪升级的高地</div>
+          <div class="rpg-node">🏰 <b>Results &amp; Discussion</b><br>主城：答案与争论都在这里</div>
+          <div class="rpg-node">🌟 <b>Conclusion</b><br>宝箱：记住这一句就够了</div>
+        </div>
+        <blockquote>“这篇论文其实是一张地图：你从 Abstract 的营地出发，沿着 Method 的小径走到 Experiments 的高地，最后在 Conclusion 打开宝箱——拿到的不是金币，是一句你能转述给别人的话。”</blockquote>
+        <p class="keep">Key terms（原文保留）：<em>contribution · generalization · ablation study</em></p>
+      </div>`;
+    }
+  },
+  {
+    slug:'training-branch',
+    name:'XXX’s Training Branch',
+    tag:'PERSONA BRANCH',
+    palette:'green',
+    berry:'#90B080',
+    problem:'我信任一个健身博主，但今天状态特殊，想按 TA 的判断体系得到建议。',
+    keywords:['健身','训练','workout','教练','博主','运动','睡眠','酸痛','练','肌肉','周期','器械'],
+    inputs:[
+      {key:'sleep', label:'昨晚睡眠', type:'select', options:['充足（7h+）','一般（5–6h）','不足（<5h）']},
+      {key:'sore', label:'身体酸痛', type:'select', options:['无','轻微','明显']},
+      {key:'cycle', label:'今日周期状态', type:'select', options:['状态好','普通','状态差']},
+      {key:'time', label:'可用时间', type:'text', placeholder:'例如：45 分钟'},
+      {key:'gear', label:'可用器械', type:'text', placeholder:'例如：只有一对哑铃 / 无器械'}
+    ],
+    mock: v => {
+      const sleep = v.sleep || '一般';
+      const sore = v.sore || '轻微';
+      const cycle = v.cycle || '普通';
+      const time = v.time || '45 分钟';
+      const gear = v.gear || '无器械';
+      const plan = sleep.includes('不足') || cycle === '状态差'
+        ? '今天不追求重量，做低强度恢复：15 分钟快走 + 全身动态拉伸，保持动起来即可。'
+        : '今天做中等强度全身循环（深蹲、俯卧撑、臀桥、核心），每组 45 秒，循环 4 轮，结尾 5 分钟拉伸。';
+      return `<div class="mock">
+        <p class="mock-label">按 TA 的公开训练理念 · 今日建议</p>
+        <p class="mock-note">mock 演示 · 基于“状态优先、可恢复、可持续”的判断体系</p>
+        <blockquote>${plan}</blockquote>
+        <div class="chips">
+          <span class="chip">睡眠：${sleep}</span>
+          <span class="chip">酸痛：${sore}</span>
+          <span class="chip">周期：${cycle}</span>
+          <span class="chip">时间：${time}</span>
+          <span class="chip">器械：${gear}</span>
+        </div>
+        <p class="disclaimer">⚠️ 非医疗建议 · 身体不适请咨询专业医师。</p>
+      </div>`;
+    }
+  },
+  {
+    slug:'less-ai-more-me',
+    name:'Less AI. More Me.',
+    tag:'SKILL BRANCH',
+    palette:'yellow',
+    berry:'#E8D078',
+    problem:'AI 写完东西，但充满 AI 味。',
+    keywords:['ai味','改稿','润色','自然','人味','写作','文字','洗稿','语气','生硬','文案','去ai'],
+    inputs:[
+      {key:'text', label:'一段文字', type:'textarea', placeholder:'粘贴那段“充满 AI 味”的文字…'}
+    ],
+    mock: v => {
+      const t = (v.text || '').trim();
+      const after = t
+        ? t.replace(/首先|其次|再次|最后|总而言之|综上所述|值得注意的是|此外|与此同时|在当今|随着.{0,12}的发展/g, ' ')
+            .replace(/人工智能|AI/gi, '我')
+            .replace(/进行|开展/g, '做')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : '把文字贴进来，它会变得更像“你”说的话。';
+      return `<div class="mock">
+        <p class="mock-label">去 AI 味 · 更像人写的版本</p>
+        <p class="mock-note">mock 演示 · 去掉套话、空转连接词与机器腔</p>
+        <blockquote>${after}</blockquote>
+        ${t ? `<p class="keep">原文：${t.slice(0,120)}${t.length>120?'…':''}</p>` : ''}
+        <p class="keep">原理：去掉“首先/其次/总而言之”这类脚手架词，把“进行”还原成“做”，把主语还给“我”。</p>
+      </div>`;
+    }
+  },
+  {
+    slug:'morning-trend-radar',
+    name:'Morning Trend Radar',
+    tag:'WORKFLOW BRANCH',
+    palette:'pink',
+    berry:'#F1BEC5',
+    problem:'团队每天要人工追踪行业热点。',
+    keywords:['热点','趋势','行业','新闻','追踪','摘要','推送','团队','雷达','监测','情报','日报'],
+    inputs:[
+      {key:'domain', label:'关注领域', type:'text', placeholder:'例如：AI 应用、消费品牌、新能源…'},
+      {key:'pushTime', label:'推送时间', type:'text', placeholder:'例如：每天 08:30'},
+      {key:'pushTo', label:'推送位置', type:'select', options:['飞书群','钉钉群','邮件','企业微信']}
+    ],
+    mock: v => {
+      const domain = v.domain || 'AI 应用';
+      const pushTime = v.pushTime || '08:30';
+      const pushTo = v.pushTo || '飞书群';
+      return `<div class="mock">
+        <p class="mock-label">今日 mock 运行结果 · ${domain}</p>
+        <p class="mock-note">${pushTime} 推送到 ${pushTo}</p>
+        <div class="pipeline">
+          <div class="pipe-step"><span class="dot"></span> 抓取：27 个信源 · 1,342 条新内容</div>
+          <div class="pipe-step"><span class="dot"></span> 去重：1,342 → 486 条独立信息</div>
+          <div class="pipe-step"><span class="dot"></span> 分类：产品 / 融资 / 观点 / 数据 四类</div>
+          <div class="pipe-step"><span class="dot"></span> 摘要：生成 9 条一句话要点</div>
+          <div class="pipe-step"><span class="dot"></span> 生成文档：Morning Radar 08:30.md</div>
+          <div class="pipe-step"><span class="dot"></span> 推送：已送达 ${pushTo} ✓</div>
+        </div>
+        <blockquote>今日 Top 3：① 某大厂上线新一代 ${domain} 助手，主打“主动执行”；② 某初创公司把 ${domain} 接入线下门店，转化率提升 18%；③ 一份新报告称 ${domain} 的推理成本 6 个月下降 41%。</blockquote>
+      </div>`;
+    }
+  },
+  {
+    slug:'what-do-i-need-today',
+    name:'What Do I Need Today?',
+    tag:'APP BRANCH',
+    palette:'mint',
+    berry:'#90A868',
+    problem:'每次出门都担心忘东西。',
+    keywords:['出门','行李','清单','忘东西','旅行','打包','会议','检查','带什么','收拾','出差'],
+    inputs:[
+      {key:'scene', label:'场景', type:'select', options:['旅行','开会','日常通勤','健身']},
+      {key:'dest', label:'目的地', type:'text', placeholder:'例如：杭州 / 公司 / 家附近'},
+      {key:'days', label:'天数', type:'text', placeholder:'例如：3'},
+      {key:'weather', label:'天气', type:'select', options:['晴','阴','雨','雪','不确定']},
+      {key:'act', label:'活动', type:'text', placeholder:'例如：登山、晚宴、路演…'}
+    ],
+    mock: v => {
+      const scene = v.scene || '旅行';
+      const weather = v.weather || '晴';
+      const lists = {
+        '旅行':['证件 / 手机 / 充电器','换洗衣物 × 天数','洗漱用品','常备药','雨具' + (weather.includes('雨')?'（必带）':'（可选）'),'移动电源','耳机','一双好走的鞋'],
+        '开会':['电脑 + 充电器','演示文稿（已备份）','转接头 / 翻页笔','名片 / 工牌','笔记本 + 笔','水杯'],
+        '日常通勤':['手机 / 钥匙 / 门卡','耳机','充电宝','雨伞（看天气）','水杯','纸巾'],
+        '健身':['运动服 / 鞋','毛巾','水杯','换洗衣物','会员卡 / 手环','洗护用品']
+      };
+      const items = lists[scene] || lists['日常通勤'];
+      const checked = scene==='日常通勤' ? [0,1] : [0];
+      return `<div class="mock">
+        <p class="mock-label">${scene}清单 · Belonging Check</p>
+        <p class="mock-note">${v.dest?('目的地：'+v.dest+' · '):''}${v.days?('天数：'+v.days+' · '):''}天气：${weather}</p>
+        <div class="checklist">
+          ${items.map((it,i)=>`<label><input type="checkbox" ${checked.includes(i)?'checked':''} onchange="this.nextElementSibling.classList.toggle('done',this.checked)"><span class="${checked.includes(i)?'done':''}">${it}</span></label>`).join('')}
+        </div>
+        <p class="keep">出门前花 10 秒过一遍，不再“总感觉忘了什么”。</p>
+      </div>`;
+    }
+  },
+  {
+    slug:'friends-anon-question-box',
+    name:'Friends’ Anonymous Question Box',
+    tag:'LINK BRANCH',
+    palette:'lilac',
+    berry:'#F7B3C8',
+    problem:'朋友之间想玩匿名提问、夸夸、爆料或整活，但普通问卷太正经，群聊又会暴露身份、刷屏，还容易冷场。',
+    keywords:['匿名','提问','朋友','群聊','夸夸','真心话','问卷','整活','爆料','回忆杀','提问箱','party','游戏'],
+    inputs:[
+      {key:'play', label:'玩法', type:'select', options:['真心话','夸夸','回忆杀','整活']},
+      {key:'openTo', label:'开放对象', type:'select', options:['好友','群聊','二维码']},
+      {key:'scale', label:'问题尺度', type:'select', options:['温和','适中','刺激']},
+      {key:'followup', label:'允许追问', type:'select', options:['允许','不允许']},
+      {key:'pic', label:'允许图片', type:'select', options:['允许','不允许']},
+      {key:'voice', label:'允许语音', type:'select', options:['允许','不允许']},
+      {key:'duration', label:'开放时间', type:'text', placeholder:'例如：24 小时'},
+      {key:'review', label:'审核开关', type:'select', options:['箱主审核后可见','直接可见']},
+      {key:'code', label:'群暗号', type:'text', placeholder:'例如：梧桐树下'}
+    ],
+    mock: v => {
+      const code = v.code || '梧桐树下';
+      const link = 'https://anon.box/f/' + Math.random().toString(36).slice(2,6);
+      const play = v.play || '真心话';
+      return `<div class="mock">
+        <p class="mock-label">朋友限定匿名提问箱 · 已生成</p>
+        <p class="mock-note">暗号「${code}」· ${v.openTo||'好友'} · ${v.duration||'24 小时'} · ${v.review||'箱主审核后可见'}</p>
+        <div class="anon-box">
+          <div>
+            <div class="anon-link text-emboss-soft">${link}</div>
+            <p class="keep" style="margin-top:6px;">免登录进入 · 随机匿名昵称 · 不收集手机号</p>
+          </div>
+          <div class="qr" id="qr"></div>
+        </div>
+        <div class="pipeline">
+          <div class="pipe-step"><span class="dot"></span> 创建房间 → 生成链接 / 二维码</div>
+          <div class="pipe-step"><span class="dot"></span> 朋友免登录进入 → 随机匿名昵称 🦊🐧🐿️</div>
+          <div class="pipe-step"><span class="dot"></span> 提交问题 → ${v.review||'箱主审核'} → 回答</div>
+          <div class="pipe-step"><span class="dot"></span> 生成回答卡回群</div>
+        </div>
+        <div class="answer-card">
+          <div>🕵️ 匿名朋友问：<em>“如果必须和群里一个人交换人生三天，你选谁？”</em></div>
+          <div style="margin-top:6px;">箱主答：…… （围观群众可贴表情 🎭）</div>
+        </div>
+        <p class="keep">提示：可随时关闭链接 · 禁止骚扰 / 人肉。</p>
+      </div>`;
+    }
+  }
+];
+
+const PALETTES = {
+  blue:  {outer:'#98C0E8', mid:'#80B0D8', inner:'#CCEBF5', center1:'#F0C030', center2:'#E8D078'},
+  green: {outer:'#90B080', mid:'#80B0A8', inner:'#D8F6CA', center1:'#F0C030', center2:'#E8D078'},
+  yellow:{outer:'#F0C030', mid:'#E8D078', inner:'#FFFFBF', center1:'#EF8E9D', center2:'#F9D8CC'},
+  pink:  {outer:'#F1BEC5', mid:'#EF8E9D', inner:'#F9D8CC', center1:'#F0C030', center2:'#E8D078'},
+  mint:  {outer:'#B7EBCC', mid:'#90A868', inner:'#B0C47F', center1:'#F0C030', center2:'#E8D078'},
+  lilac: {outer:'#C0C0D8', mid:'#F1BEC5', inner:'#F7B3C8', center1:'#F0C030', center2:'#E8D078'}
+};
+
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const byId = id => document.getElementById(id);
+let _uid = 0;
+
+function flowerSVG(p, opts={}){
+  const id = 'f' + (opts.id || (_uid++));
+  const petals = opts.petals || 6;
+  const seed = opts.seed || 0;
+  const blur = opts.blur != null ? opts.blur : 1.2;
+  let defs = `<filter id="${id}b" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${blur}"/></filter>`;
+  defs += `<radialGradient id="${id}c" cx="50%" cy="42%" r="75%"><stop offset="0%" stop-color="${p.center1}" stop-opacity=".95"/><stop offset="100%" stop-color="${p.center2}" stop-opacity=".9"/></radialGradient>`;
+  let parts = [];
+  const layer = (count, rx, ry, cy, baseAngle) => {
+    for(let i=0;i<count;i++){
+      const gid = `${id}g${i}${count}`;
+      defs += `<radialGradient id="${gid}" cx="50%" cy="28%" r="78%">
+        <stop offset="0%" stop-color="${p.outer}" stop-opacity=".95"/>
+        <stop offset="55%" stop-color="${p.mid}" stop-opacity=".8"/>
+        <stop offset="100%" stop-color="${p.inner}" stop-opacity=".3"/>
+      </radialGradient>`;
+      const a = baseAngle + i*(360/count);
+      parts.push(`<ellipse class="petal" cx="50" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${gid})" opacity=".92" transform="rotate(${a} 50 50)" filter="url(#${id}b)"/>`);
+    }
+  };
+  layer(petals, 16, 30, 27, seed);
+  layer(petals, 10, 20, 34, seed + 360/petals/2);
+  const core = `<circle class="bloom-core" cx="50" cy="50" r="12" fill="url(#${id}c)"/>`;
+  return `<svg viewBox="0 0 100 100" class="flower-svg"><defs>${defs}</defs>${parts.join('')}${core}</svg>`;
+}
+
+function stemSVG(curve, stroke=null, opts={}){
+  const s = stroke || 'var(--stem-3)';
+  return `<svg viewBox="0 0 100 200" preserveAspectRatio="none">
+    <path class="stem-path" d="${curve}" stroke="${s}" stroke-width="${opts.width||2.2}" stroke-dasharray="${opts.dash?'240':'none'}" stroke-dashoffset="${opts.dash?'240':'0'}" style="${opts.style||''}"/>
+  </svg>`;
+}
+
+function esc(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================= 存储 ================= */
+const LS_SETTINGS = 'zj_settings';
+const LS_MEMORY = 'zj_memory';
+const LS_USER = 'zj_user';
+
+function readLS(k, fallback){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
+function writeLS(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+const DEFAULT_SETTINGS = { provider:'deepseek', baseUrl:'https://api.deepseek.com/v1', model:'deepseek-chat', apiKey:'' };
+function getSettings(){ return Object.assign({}, DEFAULT_SETTINGS, readLS(LS_SETTINGS, {})); }
+function getMemory(){ return readLS(LS_MEMORY, []); }
+function pushMemory(entry){
+  const m = getMemory();
+  m.unshift(Object.assign({ time: new Date().toLocaleString('zh-CN', {hour12:false}) }, entry));
+  writeLS(LS_MEMORY, m.slice(0, 200));
+}
+
+/* ================= 导航 ================= */
+let currentView = 'opening';
+function go(view){
+  currentView = view;
+  $$('.view').forEach(v => v.classList.remove('active'));
+  byId('view-' + view).classList.add('active');
+  $$('.nav-links button').forEach(b => b.classList.toggle('active', b.dataset.nav === view));
+  if(view === 'memory') renderMemory();
+  if(view === 'branches') drawGarden();
+  if(view === 'my'){ loadSettings(); renderMemory(); renderLoginState(); }
+  if(view === 'opening' && !byId('opening-flower').innerHTML) drawOpeningFlower();
+}
+
+/* ================= Opening 花 ================= */
+function drawOpeningFlower(){
+  const wrap = byId('opening-flower');
+  const p = Object.assign({}, PALETTES.pink, {id:'open'});
+  const big = flowerSVG(p, {petals:7, seed:6, blur:1.6});
+  wrap.innerHTML = `
+    ${big}
+    <div class="flower-core">
+      <label>想要什么</label>
+      <input id="want-input" type="text" placeholder="最近有什么小麻烦？" autocomplete="off" />
+    </div>`;
+  const input = byId('want-input');
+  input.addEventListener('focus', ()=> wrap.classList.add('typing'));
+  input.addEventListener('blur', ()=> wrap.classList.remove('typing'));
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') submitNeed(); });
+  byId('dont-input').addEventListener('keydown', e=>{ if(e.key==='Enter') submitNeed(); });
+}
+
+/* ================= 花园 ================= */
+const STEM_CURVES = [
+  'M50 200 C 38 160, 58 118, 46 74',
+  'M50 200 C 62 164, 40 126, 54 78',
+  'M50 200 C 42 152, 62 108, 50 60',
+  'M50 200 C 60 158, 40 116, 52 70',
+  'M50 200 C 44 166, 56 122, 46 66',
+  'M50 200 C 56 154, 44 112, 54 72'
+];
+function drawGarden(){
+  const garden = byId('garden');
+  const spots = [
+    {left:'4%',  h:'46%', curve:0, flip:false},
+    {left:'22%', h:'58%', curve:1, flip:false},
+    {left:'40%', h:'44%', curve:2, flip:false},
+    {left:'58%', h:'56%', curve:3, flip:true},
+    {left:'76%', h:'46%', curve:4, flip:false},
+    {left:'91%', h:'58%', curve:5, flip:true}
+  ];
+  garden.innerHTML = BRANCHES.map((b, i)=>{
+    const s = spots[i];
+    const p = Object.assign({}, PALETTES[b.palette], {id:'g'+b.slug});
+    const fh = 110; // 花朵像素高度
+    const flower = flowerSVG(p, {petals:6, seed:i*9, blur:1.3});
+    const stem = stemSVG(STEM_CURVES[s.curve], null, {dash:true, width:2.2});
+    return `<div class="plant" style="left:${s.left};" data-slug="${b.slug}" onclick="openBranch('${b.slug}')">
+      <div class="stem-wrap" style="height:${s.h};">
+        <svg viewBox="0 0 100 200" preserveAspectRatio="none" class="stem-draw" data-seed="${i}">
+          <path class="stem-path" d="${STEM_CURVES[s.curve]}" stroke="${i%2? 'var(--stem-1)':'var(--stem-3)'}" stroke-width="2.2"/>
+        </svg>
+      </div>
+      <div class="flower-wrap sway" style="--sway:${s.flip?'-1deg':'1deg'}; --fh:${fh}px; top:calc(100% - ${s.h} - ${fh}px);">
+        ${flower}
+      </div>
+      <span class="branch-tag">${esc(b.name)}</span>
+      <span class="branch-name-m">${esc(b.name)}</span>
+    </div>`;
+  }).join('');
+  // 枝条逐根画出
+  requestAnimationFrame(()=>{
+    $$('#garden .stem-draw path').forEach((path, i)=>{
+      const len = path.getTotalLength ? path.getTotalLength() : 240;
+      path.style.strokeDasharray = len;
+      path.style.strokeDashoffset = len;
+      path.getBoundingClientRect();
+      path.style.transition = 'stroke-dashoffset 1.1s ' + (i*0.12) + 's var(--ease)';
+      path.style.strokeDashoffset = '0';
+    });
+  });
+}
+
+/* ================= Branch Detail ================= */
+let currentBranch = null;
+function openBranch(slug){
+  const b = BRANCHES.find(x => x.slug === slug);
+  if(!b) return;
+  currentBranch = b;
+  byId('detail-tag').textContent = b.tag;
+  byId('detail-name').textContent = b.name;
+  byId('detail-problem').textContent = b.problem;
+  const p = Object.assign({}, PALETTES[b.palette], {id:'d'+b.slug});
+  byId('detail-flower').innerHTML = flowerSVG(p, {petals:6, seed:4, blur:1.1});
+  byId('detail-inputs').innerHTML = b.inputs.map(inp => renderInput(inp)).join('');
+  byId('detail-output').innerHTML = '';
+  byId('berry').classList.remove('show');
+  byId('berry').style.setProperty('--berry', b.berry);
+  byId('run-btn').disabled = false;
+  go('detail');
+}
+function renderInput(inp){
+  const label = `<label for="in-${inp.key}">${esc(inp.label)}</label>`;
+  if(inp.type === 'select'){
+    const opts = inp.options.map(o => `<option>${esc(o)}</option>`).join('');
+    return `<div class="field">${label}<select id="in-${inp.key}">${opts}</select></div>`;
+  }
+  if(inp.type === 'textarea'){
+    return `<div class="field">${label}<textarea id="in-${inp.key}" placeholder="${esc(inp.placeholder||'')}"></textarea></div>`;
+  }
+  return `<div class="field">${label}<input id="in-${inp.key}" type="text" placeholder="${esc(inp.placeholder||'')}" /></div>`;
+}
+function collectInputs(){
+  const vals = {};
+  currentBranch.inputs.forEach(inp => {
+    const el = byId('in-' + inp.key);
+    vals[inp.key] = el ? el.value : '';
+  });
+  return vals;
+}
+function runBranch(e){
+  e.preventDefault();
+  const vals = collectInputs();
+  const out = byId('detail-output');
+  out.innerHTML = currentBranch.mock(vals);
+  // 完成后：按钮下沉，路径上结出小果实
+  const btn = byId('run-btn');
+  btn.disabled = true;
+  setTimeout(()=>{ byId('berry').classList.add('show'); }, 420);
+  // 结果保存到“我的枝间”
+  const summary = Object.values(vals).filter(v=>v).join(' · ').slice(0,60) || '（未填写）';
+  pushMemory({ kind:'usage', branch: currentBranch.name, slug: currentBranch.slug, body: summary });
+  toast('✓ 结果已保存到「我的枝间 · 记忆」');
+  out.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ================= Request adaptation & Grow ================= */
+function openAdapt(){
+  showModal(`
+    <h3 class="text-emboss">Request adaptation</h3>
+    <p>告诉 Personalware：这个 Branch 哪里不适合你？提交后即视为“已转交 Personalware”定制。</p>
+    <div class="field">
+      <label>哪里不适合我</label>
+      <textarea id="adapt-text" placeholder="例如：我想让它支持日语输入；输出太长…"></textarea>
+    </div>
+    <div id="adapt-done"></div>
+    <div class="row">
+      <button class="btn btn-secondary" onclick="hideModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitAdapt()">提交</button>
+    </div>
+  `);
+}
+function submitAdapt(){
+  const t = (byId('adapt-text').value || '').trim();
+  if(!t){ toast('请先写一句“哪里不适合我”'); return; }
+  pushMemory({ kind:'adaptation', branch: currentBranch ? currentBranch.name : '—', slug: currentBranch ? currentBranch.slug : '', body: t });
+  byId('adapt-done').innerHTML = '<span class="done-badge">✓ 已转交 Personalware</span>';
+  toast('已转交 Personalware');
+}
+function openGrow(){
+  showModal(`
+    <h3 class="text-emboss">Grow the first one</h3>
+    <p>没有匹配到现成的 Branch？提交你的新需求，它会成为一粒种子，在枝间生长。</p>
+    <div class="field">
+      <label>新需求</label>
+      <textarea id="grow-text" placeholder="描述你想被解决的那个小麻烦…"></textarea>
+    </div>
+    <div id="grow-done"></div>
+    <div class="row">
+      <button class="btn btn-secondary" onclick="hideModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitGrow()">种下种子</button>
+    </div>
+  `);
+}
+function submitGrow(){
+  const t = (byId('grow-text').value || '').trim();
+  if(!t){ toast('请先描述你的新需求'); return; }
+  pushMemory({ kind:'seed', body: t });
+  byId('grow-done').innerHTML = '<span class="done-badge">🌱 已种下，成为 seed</span>';
+  toast('已保存为一粒种子');
+}
+
+/* ================= 匹配 ================= */
+function submitNeed(){
+  const want = (byId('want-input') ? byId('want-input').value : '').trim();
+  const dont = (byId('dont-input') ? byId('dont-input').value : '').trim();
+  if(!want){ toast('先告诉我：最近有什么小麻烦？'); byId('want-input').focus(); return; }
+  const btn = byId('bloom-btn');
+  btn.disabled = true;
+  matchBranch(want, dont).then(result => {
+    btn.disabled = false;
+    if(result && result.slug){
+      const branch = BRANCHES.find(b => b.slug === result.slug);
+      playTransition(branch, ()=> openBranch(branch.slug));
+      toast('🌿 为你找到：' + (branch ? branch.name : result.slug));
+    }else{
+      // 无匹配 → 反馈 Grow
+      playNoMatch();
+    }
+  });
+}
+function localMatch(want, dont){
+  const text = (want + ' ' + dont).toLowerCase();
+  let best = null, bestScore = 0;
+  BRANCHES.forEach(b => {
+    let score = 0;
+    b.keywords.forEach(kw => { if(text.includes(kw.toLowerCase())) score += 1; });
+    if(text.includes(b.slug)) score += 3;
+    if(score > bestScore){ bestScore = score; best = b; }
+  });
+  return bestScore >= 1 ? { slug: best.slug, reason: '本地关键词匹配' } : null;
+}
+async function aiMatch(want, dont){
+  const s = getSettings();
+  const branchList = BRANCHES.map(b => `- ${b.slug}（${b.name}）：${b.problem}`).join('\n');
+  const prompt = `你是“枝间”的匹配器。根据用户需求，从以下 Branch 中选择最匹配的一个，只返回 JSON（不要多余文字）：{"slug":"<branch slug>","reason":"<一句话中文理由>"}。如果没有合适的，返回 {"slug":null,"reason":"无匹配"}。\n\nBranch 列表：\n${branchList}\n\n用户想要：${want}\n用户不想要：${dont}`;
+  const url = s.baseUrl.replace(/\/+$/,'') + '/chat/completions';
+  const resp = await fetch(url, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + s.apiKey },
+    body: JSON.stringify({ model: s.model, messages:[{role:'user', content: prompt}], temperature:0.3, response_format:{type:'json_object'} })
+  });
+  if(!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.json();
+  const content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+  const m = content.match(/\{[\s\S]*\}/);
+  const parsed = m ? JSON.parse(m[0]) : { slug:null };
+  return parsed;
+}
+async function matchBranch(want, dont){
+  const s = getSettings();
+  if(s.apiKey && s.apiKey.trim()){
+    try{ return await aiMatch(want, dont); }
+    catch(err){ console.warn('AI 匹配失败，回退本地匹配', err); }
+  }
+  return localMatch(want, dont);
+}
+
+/* ================= 无匹配 Grow ================= */
+function playNoMatch(){
+  showModal(`
+    <h3 class="text-emboss">🌱 还没有匹配的 Branch</h3>
+    <p>你的需求很新。提交它，让它在枝间成为一粒种子（seed），等待被看见、被领养、被造出来。</p>
+    <div class="field">
+      <label>新需求</label>
+      <textarea id="grow-text2" placeholder="描述你想被解决的那个小麻烦…"></textarea>
+    </div>
+    <div id="grow-done2"></div>
+    <div class="row">
+      <button class="btn btn-secondary" onclick="hideModal()">先逛逛花园</button>
+      <button class="btn btn-primary" onclick="submitGrow2()">Grow · 种下种子</button>
+    </div>
+  `);
+}
+function submitGrow2(){
+  const t = (byId('grow-text2').value || '').trim();
+  if(!t){ toast('请先描述你的新需求'); return; }
+  pushMemory({ kind:'seed', body: t });
+  byId('grow-done2').innerHTML = '<span class="done-badge">🌱 已种下，成为 seed</span>';
+  toast('已保存为一粒种子 · 可在「我的枝间 · 记忆」查看');
+}
+
+/* ================= 转场动画 ================= */
+function playTransition(branch, onDone){
+  const t = byId('transition');
+  const p = Object.assign({}, PALETTES[branch.palette], {id:'tbloom'});
+  const bloom = flowerSVG(p, {petals:6, seed:9, blur:1.4}).replace('<svg', '<svg class="t-bloom"');
+  // 颜料片花瓣
+  const colors = [p.outer, p.mid, p.inner, p.center1, p.center2];
+  let petals = '';
+  for(let i=0;i<14;i++){
+    const left = 20 + Math.random()*60;
+    const c = colors[i % colors.length];
+    const dx = (Math.random()*2 - 1) * 140;
+    const rot = (Math.random()*2 - 1) * 240;
+    const size = 14 + Math.random()*22;
+    const delay = Math.random()*0.25;
+    petals += `<span class="t-petal" style="left:${left}%; width:${size}px; height:${size*1.25}px; background:radial-gradient(closest-side, ${c}, transparent 75%); --dx:${dx}px; --rot:${rot}deg; animation-delay:${delay}s;"></span>`;
+  }
+  t.innerHTML = `
+    ${petals}
+    <svg class="t-stem-svg"><path d="M30 100 C 26 60, 36 28, 30 0" stroke="var(--stem-3)"/></svg>
+    <div style="position:absolute; left:50%; top:20%; transform:translate(-50%,-50%);">${bloom}</div>
+    <div class="t-caption">${esc(branch.name)}</div>`;
+  t.classList.remove('play');
+  void t.offsetWidth;
+  t.classList.add('play');
+  setTimeout(()=>{
+    t.classList.remove('play');
+    if(onDone) onDone();
+  }, 1550);
+}
+
+/* ================= 我的枝间 ================= */
+function switchTab(tab){
+  $$('.my-panel').forEach(p => p.classList.remove('active'));
+  $$('.my-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  byId('panel-' + tab).classList.add('active');
+  if(tab === 'memory') renderMemory();
+  if(tab === 'login') renderLoginState();
+}
+function loadSettings(){
+  const s = getSettings();
+  byId('set-provider').value = s.provider || 'deepseek';
+  byId('set-base').value = s.baseUrl;
+  byId('set-model').value = s.model;
+  byId('set-key').value = s.apiKey || '';
+}
+function saveSettings(){
+  const base = byId('set-base').value.trim();
+  const provider = byId('set-provider').value;
+  const defs = { deepseek:{baseUrl:'https://api.deepseek.com/v1', model:'deepseek-chat'}, openai:{baseUrl:'https://api.openai.com/v1', model:'gpt-4o-mini'}, custom:{baseUrl:'', model:''} };
+  const d = defs[provider];
+  const settings = {
+    provider,
+    baseUrl: base || d.baseUrl,
+    model: byId('set-model').value.trim() || d.model,
+    apiKey: byId('set-key').value.trim()
+  };
+  writeLS(LS_SETTINGS, settings);
+  toast('✓ 设置已保存');
+}
+function renderMemory(){
+  const list = byId('memory-list');
+  const m = getMemory();
+  if(!m.length){ list.innerHTML = '<div class="mem-empty">还没有记忆。<br>你在枝间留下的种子、定制转交与使用记录，都会在这里。</div>'; return; }
+  const kindLabel = { seed:'🌱 种子 · seed', adaptation:'🕊 定制转交 · Personalware', usage:'📜 使用记录' };
+  list.innerHTML = m.map(item => `
+    <div class="mem-item relief">
+      <div class="mem-kind">${kindLabel[item.kind] || item.kind}</div>
+      <div class="mem-body">${esc(item.body)}${item.branch ? '<span style="opacity:.7"> · ' + esc(item.branch) + '</span>' : ''}</div>
+      <div class="mem-time">${esc(item.time)}</div>
+    </div>`).join('');
+}
+function renderLoginState(){
+  const u = readLS(LS_USER, null);
+  byId('login-state').textContent = u ? '已登录（演示）：' + u.name : '未登录 · 不影响使用';
+}
+function doLogin(){
+  const name = byId('login-name').value.trim();
+  if(!name){ toast('请输入名字或邮箱'); return; }
+  writeLS(LS_USER, { name, at: Date.now() });
+  renderLoginState();
+  toast('✓ 登录成功（演示）');
+}
+function doLogout(){
+  localStorage.removeItem(LS_USER);
+  byId('login-name').value = '';
+  renderLoginState();
+  toast('已退出');
+}
+
+/* ================= 模态 / Toast ================= */
+function showModal(html){
+  byId('modal-card').innerHTML = html;
+  byId('modal').classList.add('show');
+}
+function hideModal(){ byId('modal').classList.remove('show'); }
+byId('modal').addEventListener('click', e=>{ if(e.target === byId('modal')) hideModal(); });
+
+let toastTimer = null;
+function toast(msg){
+  const t = byId('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+
+/* ================= 伪二维码 ================= */
+function drawQR(){
+  const qr = byId('qr');
+  if(!qr) return;
+  const n = 11, cells = [];
+  let rnd = 42;
+  const rand = () => (rnd = (rnd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for(let y=0;y<n;y++){
+    for(let x=0;x<n;x++){
+      const inFinder = (x<3&&y<3)||(x>n-4&&y<3)||(x<3&&y>n-4);
+      const dark = inFinder ? ((x===1&&y===1)||(x===n-2&&y===1)||(x===1&&y===n-2) ? false : (x===0||x===2||y===0||y===2)) : rand() > 0.55;
+      if(dark) cells.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="#405838"/>`);
+    }
+  }
+  qr.innerHTML = `<svg viewBox="0 0 ${n} ${n}" width="100%" height="100%" shape-rendering="crispEdges">${cells.join('')}</svg>`;
+}
+
+/* ================= 初始化 ================= */
+drawOpeningFlower();
+drawGarden();
+loadSettings();
+renderMemory();
+renderLoginState();
+</script>
+</body>
+</html>
