@@ -1,0 +1,55 @@
+{
+  "schema": "branches.branch/v0.1",
+  "id": "less-ai-more-me",
+  "name": "Less AI. More Me.",
+  "name_zh": "去 AI 味",
+  "kind": "skill",
+  "capability": "在保留事实与核心意思的前提下，减少中文文本中的模板化 AI 写作痕迹，让表达更自然、更像具体的人。",
+  "source": {
+    "type": "github",
+    "repository": "https://github.com/op7418/Humanizer-zh",
+    "entry": "SKILL.md",
+    "license": "MIT",
+    "upstream_notes": "核心文件翻译自 blader/humanizer，并参考 stop-slop 与 Wikipedia Signs of AI writing。"
+  },
+  "runtime": {
+    "mode": "zhijian_server_adapter",
+    "adapter": "markdown-skill",
+    "user_install_required": false,
+    "remote_skill_url": "https://raw.githubusercontent.com/op7418/Humanizer-zh/main/SKILL.md",
+    "cache_ttl_seconds": 3600
+  },
+  "inputs": [
+    {
+      "name": "text",
+      "type": "text",
+      "required": true,
+      "max_chars": 12000
+    },
+    {
+      "name": "tone",
+      "type": "enum",
+      "required": false
+    },
+    {
+      "name": "voiceSample",
+      "type": "text",
+      "required": false,
+      "max_chars": 2000
+    }
+  ],
+  "output": {
+    "type": "text"
+  },
+  "rights": {
+    "license_verified": true,
+    "attribution_required_in_distribution": true,
+    "source_visible_in_branch_detail": true
+  },
+  "safety": {
+    "preserve_facts": true,
+    "no_ai_detector_bypass_claim": true,
+    "remote_source_is_trusted_code_like_input": true,
+    "production_note": "Before large-scale launch, pin SKILL.md to a full reviewed commit SHA instead of tracking main."
+  }
+}

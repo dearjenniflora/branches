@@ -1478,12 +1478,19 @@
         type: "Skill Branch",
         typeZh: "能力枝",
         name: "Less AI. More Me.",
-        problem: "AI 写完东西，但充满 AI 味。",
+        problem: "AI 写完了，但一眼就像 AI。我想保留原意，把它改得更自然、更像我。",
         keywords: [
           "ai味", "ai 味", "不像人", "润色", "改写",
-          "自然", "文案", "写作", "口吻", "机械"
+          "自然", "文案", "写作", "口吻", "机械", "人味",
+          "官腔", "机器人", "生硬", "chatgpt", "claude"
         ],
-        color: "rgba(206,176,170,.36)"
+        color: "rgba(206,176,170,.36)",
+        source: {
+          label: "Humanizer-zh · op7418",
+          url: "https://github.com/op7418/Humanizer-zh",
+          license: "MIT",
+          note: "第三方开源 Skill"
+        }
       },
 
       {
@@ -2038,13 +2045,44 @@
           return `
             <div class="field-group">
               <label class="field-label">
-                粘贴需要去掉 AI 味的文字
+                把想改自然一点的文字放进来
               </label>
 
               <textarea
                 name="text"
                 class="field inset-field"
-                placeholder="把那段有点像机器写的文字放进来……"
+                maxlength="12000"
+                required
+                placeholder="粘贴 AI 写过、或者你觉得太机械的文字……"
+              ></textarea>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">
+                希望它更像什么样？
+              </label>
+
+              <select
+                name="tone"
+                class="field inset-field"
+              >
+                <option value="preserve">尽量保留原来的口吻</option>
+                <option value="natural">更自然、更像日常表达</option>
+                <option value="professional">更专业，但不要官腔</option>
+                <option value="warm">更温柔、更有个人感</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">
+                如果你愿意，可以给它一小段“你自己”的文字（可选）
+              </label>
+
+              <textarea
+                name="voiceSample"
+                class="field inset-field"
+                maxlength="2000"
+                placeholder="例如你以前写过的一小段，让它更容易保留你的节奏和习惯。"
               ></textarea>
             </div>
           `;
@@ -2177,12 +2215,24 @@
                   ${escapeHTML(branch.problem)}
                 </p>
 
-                <div class="source-note">
-                  从一个真实的小麻烦开始。
-                  <span class="small-en">
-                    Grown from a real need.
-                  </span>
-                </div>
+                ${branch.source ? `
+                  <div class="source-note">
+                    <span>${escapeHTML(branch.source.note)} · ${escapeHTML(branch.source.label)} · ${escapeHTML(branch.source.license)}</span>
+                    <a
+                      href="${escapeHTML(branch.source.url)}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style="margin-left:6px;"
+                    >查看来源 ↗</a>
+                  </div>
+                ` : `
+                  <div class="source-note">
+                    从一个真实的小麻烦开始。
+                    <span class="small-en">
+                      Grown from a real need.
+                    </span>
+                  </div>
+                `}
 
                 <section class="detail-section">
 
@@ -2299,7 +2349,7 @@
           "把一个创作者公开表达过的训练理念整理成可调用的判断体系，再结合你今天的状态给出建议。示例结果不构成医疗建议。",
 
         "less-ai-more-me":
-          "不是简单删掉几个 AI 常用词，而是重新调整节奏、句式、信息密度和表达习惯，让文字重新像一个具体的人。",
+          "接入真实开源 Humanizer-zh Skill。它会先识别公式化结构、空泛拔高、连接词堆叠、过度对称、节奏过齐等常见 AI 写作痕迹，再在尽量保留原意和事实的前提下重写。",
 
         "morning-trend-radar":
           "把重复的信息追踪变成固定流程：抓取、去重、分类、摘要、形成文档，再送到团队真正工作的地方。",
@@ -2475,22 +2525,10 @@
         const original = data.text || "我们应该充分认识到这一问题的重要性，并积极采取措施进行改善。";
 
         return `
-          <p>
-            <strong>原句：</strong><br>
-            ${escapeHTML(original)}
-          </p>
-
-          <p>
-            <strong>Less AI. More Me.：</strong><br>
-            这件事其实没必要说得那么大。
-            问题已经摆在这里了，
-            下一步是看看我们到底能改什么。
-          </p>
-
-          <p>
-            调整重点：减少总结腔、对称句式和空泛判断，
-            保留真正有信息的部分。
-          </p>
+          <p><strong>Branch 暂时没连上运行环境。</strong></p>
+          <p>你的原文已经保留在本页，没有上传到其他备用服务：</p>
+          <p>${escapeHTML(original)}</p>
+          <p style="color:var(--ink-soft);">重新连接 Worker 后，这颗 Branch 会调用开源 Humanizer-zh Skill 完成真正的改写，而不是用前端假结果代替。</p>
         `;
       }
 

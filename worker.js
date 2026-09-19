@@ -1,15 +1,25 @@
 /* ============================================================
-   枝间 BRANCHES · AI Proxy (Cloudflare Worker)
+   枝间 BRANCHES · AI Proxy (Cloudflare Worker) · Humanizer-zh 版
+
+   这一版把 Skill Branch「Less AI. More Me.」从写死的 Demo prompt
+   升级为真实开源 Skill：
+   Worker 在服务端读取 op7418/Humanizer-zh 的 SKILL.md（MIT），
+   缓存 1 小时后作为该 Branch 的执行指令。
+   访客不需要安装任何 Skill。
 
    部署方式（二选一）：
-   A. Dashboard：Workers & Pages → Create → Worker，把默认代码
-      全部删掉，粘贴本文件全部内容 → Deploy。
-   B. wrangler：npx wrangler deploy worker.js
+   A. Dashboard：Workers & Pages → branchesai → Edit code，
+      把默认代码全部删掉，粘贴本文件全部内容 → Deploy。
+   B. wrangler：npx wrangler deploy worker-humanizer.js
 
-   部署后必须设置 3 个变量（Settings → Variables and Secrets）：
+   部署后需要保留的变量（Settings → Variables and Secrets）：
      API_KEY   （类型选 Secret）你的模型供应商 API Key
      API_BASE  https://api.deepseek.com/v1/chat/completions
      MODEL     deepseek-v4-flash   ← 必须填平台真实的模型 ID
+
+   可选变量：
+     HUMANIZER_SKILL_URL  覆盖上游 SKILL.md 地址
+                          （例如固定到已审核的 commit SHA）
 
    注意：这个 Worker 没有鉴权，任何知道地址的人都能消耗你的额度。
    上线前建议加一层来源校验或 Cloudflare Rate Limiting。
@@ -31,6 +41,24 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8000",
   "http://127.0.0.1:8000"
 ];
+
+/* ------------------------------------------------------------
+   真实 Skill 来源（Less AI. More Me. = Humanizer-zh）
+   ------------------------------------------------------------ */
+
+const HUMANIZER = {
+  slug: "less-ai-more-me",
+  name: "Humanizer-zh",
+  repo: "https://github.com/op7418/Humanizer-zh",
+  license: "MIT",
+  defaultUrl:
+    "https://raw.githubusercontent.com/op7418/Humanizer-zh/main/SKILL.md",
+  ttlSeconds: 3600,
+  maxChars: 12000
+};
+
+/* 同一个 Worker 实例内的热缓存（Cache API 之外的兜底） */
+let skillMemoryCache = { url: "", text: "", expiresAt: 0 };
 
 export default {
   async fetch(request, env) {
@@ -187,6 +215,11 @@ async function runBranch(slug, inputs, env, corsHeaders) {
     return json({ error: "Unknown Branch" }, 400, corsHeaders);
   }
 
+  /* Skill Branch：真正加载 GitHub 上的开源 Skill，而不是本地 demo prompt */
+  if (slug === HUMANIZER.slug) {
+    return await runHumanizerBranch(inputs, env, corsHeaders);
+  }
+
   const definitions = {
 
     "teach-me-like-this": `
@@ -218,27 +251,6 @@ async function runBranch(slug, inputs, env, corsHeaders) {
 - 内容简洁。
 - 不进行诊断。
 - 结尾注明：非医疗建议。
-`,
-
-    "less-ai-more-me": `
-你正在运行 Skill Branch：Less AI. More Me.
-
-用户会提供一段 AI 味很重的文字。
-
-你的任务：
-在不改变核心意思的前提下，
-把它改得更自然、更具体、更像真实的人写的。
-
-避免：
-- 首先、其次、最后
-- 值得注意的是
-- 不仅……而且……
-- 过多总结
-- 空泛拔高
-- 对称句堆叠
-
-直接输出修改后的版本，
-不要写长篇分析。
 `,
 
     "morning-trend-radar": `
@@ -329,7 +341,160 @@ ${definitions[slug]}
   return json({ result }, 200, corsHeaders);
 }
 
-async function callAI(messages, env) {
+/* ------------------------------------------------------------
+   Skill Branch: Less AI. More Me.
+   执行指令来自上游开源 Skill（Humanizer-zh, MIT），
+   失败时直接报错 —— 绝不返回一个「看起来成功」的假改写。
+   ------------------------------------------------------------ */
+
+async function runHumanizerBranch(inputs, env, corsHeaders) {
+  const text = (inputs.text || "").toString();
+
+  if (!text.trim()) {
+    return json({ error: "缺少要改写的文本" }, 400, corsHeaders);
+  }
+
+  if (text.length > HUMANIZER.maxChars) {
+    return json(
+      { error: `文本超过 ${HUMANIZER.maxChars} 字上限` },
+      400,
+      corsHeaders
+    );
+  }
+
+  const skill = await loadHumanizerSkill(env);
+
+  const tone = (inputs.tone || "").toString().trim();
+  const voiceSample = (inputs.voiceSample || "").toString().trim();
+
+  const lines = [
+    "你是枝间 BRANCHES 中正在被调用的 Skill Branch：Less AI. More Me.（去 AI 味）。",
+    "",
+    `===== 以下是从开源仓库加载的 Skill 完整说明（${HUMANIZER.name} · op7418 · ${HUMANIZER.license}）=====`,
+    skill,
+    "===== Skill 说明结束 =====",
+    "",
+    "补充要求（优先级高于 Skill 说明中与输出格式相关的部分）：",
+    "- 只输出改写后的正文本身：不要解释、不要分析、不要加前后缀、不要用代码块包裹。",
+    "- 保留原文的事实、数字、专有名词与核心意思，不新增信息。",
+    "- 不要声称能绕过任何 AI 检测工具。",
+    "- 用户文本多为中文，输出也用中文；英文术语、代码保持原样。",
+    tone
+      ? `- 用户希望的语气：${tone}。`
+      : "- 用户没有指定语气，保持自然、具体、像真人写的那样。"
+  ];
+
+  if (voiceSample) {
+    lines.push(
+      `- 用户提供了自己平时说话的样本，请贴近这种口吻：${voiceSample}`
+    );
+  }
+
+  const messages = [
+    { role: "system", content: lines.join("\n") },
+    { role: "user", content: text }
+  ];
+
+  const result = await callAI(messages, env, {
+    temperature: 0.5,
+    maxTokens: 4000
+  });
+
+  return json(
+    {
+      result,
+      source: {
+        name: HUMANIZER.name,
+        repo: HUMANIZER.repo,
+        license: HUMANIZER.license
+      }
+    },
+    200,
+    corsHeaders
+  );
+}
+
+async function loadHumanizerSkill(env) {
+  const url = env.HUMANIZER_SKILL_URL || HUMANIZER.defaultUrl;
+  const now = Date.now();
+
+  if (
+    skillMemoryCache.url === url &&
+    skillMemoryCache.text &&
+    skillMemoryCache.expiresAt > now
+  ) {
+    return skillMemoryCache.text;
+  }
+
+  /* 1. Cloudflare Cache API（跨实例、跨 colo 更省上游请求） */
+  const cacheKey = new Request(url, { method: "GET" });
+  try {
+    const cached = await caches.default.match(cacheKey);
+    if (cached) {
+      const cachedText = await cached.text();
+      if (cachedText && cachedText.trim()) {
+        rememberSkill(url, cachedText, now);
+        return cachedText;
+      }
+    }
+  } catch (error) {
+    /* 缓存不可用时忽略，继续走上游 */
+  }
+
+  /* 2. 上游 GitHub raw */
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+
+  let response;
+  try {
+    response = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "zhijian-branches-worker" }
+    });
+  } catch (error) {
+    throw new Error(`无法加载 Humanizer-zh SKILL.md：${error.message}`);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    throw new Error(`无法加载 Humanizer-zh SKILL.md：HTTP ${response.status}`);
+  }
+
+  const text = await response.text();
+
+  if (!text || !text.trim()) {
+    throw new Error("Humanizer-zh SKILL.md 内容为空");
+  }
+
+  rememberSkill(url, text, now);
+
+  try {
+    await caches.default.put(
+      cacheKey,
+      new Response(text, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": `max-age=${HUMANIZER.ttlSeconds}`
+        }
+      })
+    );
+  } catch (error) {
+    /* 缓存写入失败不影响本次运行 */
+  }
+
+  return text;
+}
+
+function rememberSkill(url, text, now) {
+  skillMemoryCache = {
+    url,
+    text,
+    expiresAt: now + HUMANIZER.ttlSeconds * 1000
+  };
+}
+
+async function callAI(messages, env, options = {}) {
   if (!env.API_KEY) {
     throw new Error("API_KEY 未配置");
   }
@@ -353,8 +518,8 @@ async function callAI(messages, env) {
     body: JSON.stringify({
       model: env.MODEL,
       messages,
-      temperature: 0.35,
-      max_tokens: 1200
+      temperature: options.temperature ?? 0.35,
+      max_tokens: options.maxTokens ?? 1200
     })
   });
 
