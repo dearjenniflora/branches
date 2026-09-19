@@ -1,0 +1,20 @@
+// 枝间 branchesai Worker —— wrangler 部署配置
+//
+// 部署：cd /Users/jennifer/Documents/Developer/branches
+//       env -u CLOUDFLARE_API_TOKEN npx wrangler deploy
+//       （必须 unset，否则 wrangler 会拿环境里的哨兵当 API Token 用）
+//
+// vars 是明文变量，不是密钥：wrangler deploy 会用这里的值覆盖同名变量，
+// 所以改 API_BASE / MODEL 只需要改这里再 deploy。
+// API_KEY 以 Secret 形式存在 Cloudflare 侧，本文件不含它，deploy 也不会动它。
+{
+  "name": "branchesai",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  // 关掉 Preview URLs：预览地址同样是公开可跑的，会额外消耗 API 额度
+  "preview_urls": false,
+  "vars": {
+    "API_BASE": "https://api.deepseek.com/v1/chat/completions",
+    "MODEL": "deepseek-v4-flash"
+  }
+}

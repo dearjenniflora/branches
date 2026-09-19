@@ -187,7 +187,8 @@ slug: friends-anon-question-box
       { role: "system", content: systemPrompt },
       { role: "user", content: `我的需求是：${need}` }
     ],
-    env
+    env,
+    { maxTokens: 1600 }
   );
 
   let parsed;
@@ -519,7 +520,9 @@ async function callAI(messages, env, options = {}) {
       model: env.MODEL,
       messages,
       temperature: options.temperature ?? 0.35,
-      max_tokens: options.maxTokens ?? 1200
+      /* 注意：这个模型是推理模型，推理 token 也从这个预算里扣。
+         预算给小了会出现「推理占了全部 token、正文为空」的 finish_reason=length。 */
+      max_tokens: options.maxTokens ?? 4000
     })
   });
 
@@ -534,7 +537,13 @@ async function callAI(messages, env, options = {}) {
   const content = data?.choices?.[0]?.message?.content;
 
   if (!content) {
-    throw new Error("API 没有返回正文");
+    const choice = data?.choices?.[0];
+
+    throw new Error(
+      choice?.finish_reason === "length"
+        ? `模型没有产出正文：max_tokens=${options.maxTokens ?? 4000} 被推理 token 占满`
+        : "API 没有返回正文"
+    );
   }
 
   return content;
