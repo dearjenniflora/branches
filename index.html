@@ -2791,11 +2791,12 @@
 
     async function submitAnonymousQuestion(event) {
       event.preventDefault();
-      const content = new FormData(event.currentTarget).get("content");
+      const form = event.currentTarget;
+      const content = new FormData(form).get("content");
 
       try {
         await questionBoxRequest("submit", { boxId: state.boxId, content });
-        event.currentTarget.reset();
+        form.reset();
         showToast("问题已经匿名送达。 ");
       } catch (error) {
         showToast(error.message);
