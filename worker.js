@@ -63,6 +63,9 @@ let skillMemoryCache = { url: "", text: "", expiresAt: 0 };
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      return json({ error: "Origin not allowed" }, 403, {});
+    }
     const corsHeaders = {
       "Access-Control-Allow-Origin": corsHeaders_for(origin),
       "Access-Control-Allow-Headers": "Content-Type",
@@ -79,7 +82,15 @@ export default {
     }
 
     try {
+      const contentLength = Number(request.headers.get("Content-Length") || 0);
+      if (contentLength > 20000) {
+        return json({ error: "Request is too large" }, 413, corsHeaders);
+      }
       const body = await request.json();
+
+      if (body.action === "questionBox") {
+        return await handleQuestionBox(body, env, corsHeaders);
+      }
 
       if (body.action === "match") {
         return await matchBranch(body.need, env, corsHeaders);
@@ -103,6 +114,203 @@ export default {
 
 function corsHeaders_for(origin) {
   return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
+/* ------------------------------------------------------------
+   匿名提问箱
+   管理凭证只在创建者的 URL fragment 中保存，服务端只存其哈希。
+   ------------------------------------------------------------ */
+
+async function handleQuestionBox(body, env, corsHeaders) {
+  if (!env.DB) {
+    throw new Error("匿名提问箱数据库尚未配置");
+  }
+
+  const operation = body.operation;
+
+  if (operation === "create") {
+    const title = cleanText(body.title, 60);
+    const greeting = cleanText(body.greeting, 220);
+
+    if (!title) {
+      return json({ error: "请给提问箱写一个标题" }, 400, corsHeaders);
+    }
+
+    let id;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const candidate = randomId(8);
+      const existing = await env.DB
+        .prepare("SELECT id FROM question_boxes WHERE id = ?")
+        .bind(candidate)
+        .first();
+      if (!existing) {
+        id = candidate;
+        break;
+      }
+    }
+
+    if (!id) {
+      throw new Error("暂时无法创建提问箱，请稍后再试");
+    }
+
+    const ownerToken = randomToken();
+    await env.DB
+      .prepare(
+        "INSERT INTO question_boxes (id, owner_token_hash, title, greeting) VALUES (?, ?, ?, ?)"
+      )
+      .bind(id, await sha256(ownerToken), title, greeting)
+      .run();
+
+    return json({ id, ownerToken, title, greeting }, 201, corsHeaders);
+  }
+
+  const boxId = cleanId(body.boxId);
+  if (!boxId) {
+    return json({ error: "提问箱地址无效" }, 400, corsHeaders);
+  }
+
+  if (operation === "get") {
+    const box = await getBox(env, boxId);
+    if (!box) return json({ error: "没有找到这个提问箱" }, 404, corsHeaders);
+
+    const { results: questions } = await env.DB
+      .prepare(
+        "SELECT id, content, answer, created_at, answered_at FROM questions WHERE box_id = ? AND status = 'answered' ORDER BY answered_at DESC LIMIT 100"
+      )
+      .bind(boxId)
+      .all();
+
+    return json({ box: publicBox(box), questions }, 200, corsHeaders);
+  }
+
+  if (operation === "submit") {
+    const box = await getBox(env, boxId);
+    if (!box) return json({ error: "没有找到这个提问箱" }, 404, corsHeaders);
+    if (!box.is_open) return json({ error: "这个提问箱已经暂停接收问题" }, 403, corsHeaders);
+
+    const content = cleanText(body.content, 500);
+    if (!content) {
+      return json({ error: "问题不能为空" }, 400, corsHeaders);
+    }
+
+    const total = await env.DB
+      .prepare("SELECT COUNT(*) AS count FROM questions WHERE box_id = ?")
+      .bind(boxId)
+      .first();
+    if (Number(total?.count || 0) >= 500) {
+      return json({ error: "这个提问箱暂时收到了很多问题，请稍后再试" }, 429, corsHeaders);
+    }
+
+    await env.DB
+      .prepare("INSERT INTO questions (id, box_id, content) VALUES (?, ?, ?)")
+      .bind(crypto.randomUUID(), boxId, content)
+      .run();
+
+    return json({ ok: true }, 201, corsHeaders);
+  }
+
+  const token = String(body.ownerToken || "");
+  const box = await getBox(env, boxId);
+  if (!box || !token || (await sha256(token)) !== box.owner_token_hash) {
+    return json({ error: "管理链接无效或已失效" }, 403, corsHeaders);
+  }
+
+  if (operation === "adminList") {
+    const { results: questions } = await env.DB
+      .prepare(
+        "SELECT id, content, status, answer, created_at, answered_at FROM questions WHERE box_id = ? AND status != 'deleted' ORDER BY created_at DESC LIMIT 500"
+      )
+      .bind(boxId)
+      .all();
+    return json({ box: publicBox(box), questions }, 200, corsHeaders);
+  }
+
+  if (operation === "answer") {
+    const questionId = cleanUuid(body.questionId);
+    const answer = cleanText(body.answer, 1000);
+    if (!questionId || !answer) {
+      return json({ error: "回复不能为空" }, 400, corsHeaders);
+    }
+    const result = await env.DB
+      .prepare(
+        "UPDATE questions SET answer = ?, status = 'answered', answered_at = CURRENT_TIMESTAMP WHERE id = ? AND box_id = ? AND status != 'deleted'"
+      )
+      .bind(answer, questionId, boxId)
+      .run();
+    if (!result.meta?.changes) return json({ error: "没有找到这个问题" }, 404, corsHeaders);
+    return json({ ok: true }, 200, corsHeaders);
+  }
+
+  if (operation === "remove") {
+    const questionId = cleanUuid(body.questionId);
+    const result = await env.DB
+      .prepare("UPDATE questions SET status = 'deleted' WHERE id = ? AND box_id = ?")
+      .bind(questionId, boxId)
+      .run();
+    if (!result.meta?.changes) return json({ error: "没有找到这个问题" }, 404, corsHeaders);
+    return json({ ok: true }, 200, corsHeaders);
+  }
+
+  if (operation === "setOpen") {
+    const isOpen = body.isOpen ? 1 : 0;
+    await env.DB
+      .prepare("UPDATE question_boxes SET is_open = ? WHERE id = ?")
+      .bind(isOpen, boxId)
+      .run();
+    return json({ ok: true, isOpen: Boolean(isOpen) }, 200, corsHeaders);
+  }
+
+  return json({ error: "Unknown question box operation" }, 400, corsHeaders);
+}
+
+function cleanText(value, maxLength) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, maxLength);
+}
+
+function cleanId(value) {
+  const id = String(value || "");
+  return /^[a-z2-7]{8}$/.test(id) ? id : null;
+}
+
+function cleanUuid(value) {
+  const id = String(value || "");
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : null;
+}
+
+function randomId(length) {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz234567";
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => alphabet[byte % alphabet.length]).join("");
+}
+
+function randomToken() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function getBox(env, id) {
+  return env.DB
+    .prepare("SELECT id, owner_token_hash, title, greeting, is_open, created_at FROM question_boxes WHERE id = ?")
+    .bind(id)
+    .first();
+}
+
+function publicBox(box) {
+  return {
+    id: box.id,
+    title: box.title,
+    greeting: box.greeting,
+    isOpen: Boolean(box.is_open),
+    createdAt: box.created_at
+  };
 }
 
 /* 说明：CORS 只影响浏览器是否接受响应，不等于鉴权。

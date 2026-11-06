@@ -1289,7 +1289,82 @@
     }
 
     /* =========================================================
-       13. MOBILE
+       13. QUESTION BOX
+    ========================================================= */
+
+    .question-box {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 82px 0;
+    }
+
+    .question-box-head {
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .question-box-title {
+      margin: 12px 0;
+      font-family: Georgia, "Songti SC", serif;
+      font-size: clamp(42px, 7vw, 70px);
+      font-weight: 400;
+      line-height: .98;
+      letter-spacing: -.05em;
+    }
+
+    .question-box-copy {
+      max-width: 520px;
+      color: var(--ink-soft);
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    .question-form,
+    .question-list,
+    .admin-list {
+      margin-top: 34px;
+    }
+
+    .question-card {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .question-card p {
+      margin: 0;
+      line-height: 1.75;
+      white-space: pre-wrap;
+    }
+
+    .question-answer {
+      margin-top: 14px !important;
+      padding: 14px 16px;
+      border-left: 2px solid var(--sage);
+      color: var(--ink-soft);
+      background: rgba(219,226,212,.28);
+    }
+
+    .admin-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 25px 0 8px;
+    }
+
+    .admin-answer-field {
+      min-height: 88px;
+      margin-top: 15px;
+    }
+
+    .box-status {
+      display: inline-block;
+      margin-top: 18px;
+      color: var(--ink-faint);
+      font-size: 12px;
+    }
+
+    /* =========================================================
+       14. MOBILE
     ========================================================= */
 
     @media (max-width: 880px) {
@@ -1524,7 +1599,7 @@
         type: "Link Branch",
         typeZh: "链接枝",
         name: "Friends’ Anonymous Question Box",
-        problem: "朋友之间想玩匿名提问、夸夸、爆料或整活，但普通问卷太正经。",
+        problem: "想收下朋友的匿名问题，再按自己的节奏回复。",
         keywords: [
           "匿名", "提问箱", "朋友", "群聊", "真心话",
           "爆料", "夸夸", "整活", "问卷", "匿名提问"
@@ -1547,7 +1622,9 @@
       view: "home",
       currentSlug: null,
       lastNeed: "",
-      mineTab: "saved"
+      mineTab: "saved",
+      boxId: null,
+      ownerToken: null
     };
 
     const app = document.querySelector("#app");
@@ -2121,36 +2198,30 @@
           return `
             <div class="field-group">
               <label class="field-label">
-                玩法
+                提问箱标题
               </label>
 
-              <select
-                name="mode"
+              <input
+                name="title"
                 class="field inset-field"
-              >
-                <option>真心话</option>
-                <option>夸夸</option>
-                <option>回忆杀</option>
-                <option>整活</option>
-              </select>
+                maxlength="60"
+                required
+                placeholder="例如：问问我吧"
+              />
             </div>
 
             <div class="field-group">
               <label class="field-label">
-                开放对象
+                想对朋友说的话（可选）
               </label>
 
-              <select
-                name="audience"
+              <textarea
+                name="greeting"
                 class="field inset-field"
-              >
-                <option>好友</option>
-                <option>群聊</option>
-                <option>二维码</option>
-              </select>
+                maxlength="220"
+                placeholder="什么都可以问，我会慢慢回答。"
+              ></textarea>
             </div>
-
-            ${simpleInput("code", "群暗号", "例如：今晚别装")}
           `;
       }
     }
@@ -2262,7 +2333,7 @@
 
                 <form
                   id="branchForm"
-                  onsubmit="runBranch(event,'${branch.slug}')"
+                  onsubmit="${branch.slug === "friends-anon-question-box" ? "createQuestionBox(event)" : `runBranch(event,'${branch.slug}')`}"
                 >
 
                   ${branchForm(branch)}
@@ -2358,7 +2429,7 @@
           "不从一份永远不变的万能清单开始，而从今天的场景开始。旅行、上课、开会和普通出门，可以得到完全不同的 Belonging Check。",
 
         "friends-anon-question-box":
-          "生成一个朋友限定的匿名入口。朋友免登录进入，获得随机匿名身份，再提交问题；箱主可以审核、回答并把回答卡重新发回群里。"
+          "创建一个可以直接分享的匿名提问箱。朋友不需要注册就能提问；你在私密管理页审核、删除或回复问题，再把公开回答分享出去。"
       };
 
       return descriptions[slug];
@@ -2629,6 +2700,220 @@
           <span>${text}</span>
         </label>
       `;
+    }
+
+    /* =========================================================
+       ANONYMOUS QUESTION BOX
+    ========================================================= */
+
+    async function questionBoxRequest(operation, payload = {}) {
+      const response = await fetch(AI_PROXY, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "questionBox",
+          operation,
+          ...payload
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "暂时无法完成这个操作");
+      }
+      return data;
+    }
+
+    async function createQuestionBox(event) {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+      try {
+        const data = await questionBoxRequest("create", values);
+        location.hash = `manage/${data.id}/${data.ownerToken}`;
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function questionBoxView() {
+      return `
+        ${navbar()}
+        <main class="page">
+          <div class="shell">
+            <section id="questionBoxContent" class="question-box">
+              <p class="muted">正在打开提问箱……</p>
+            </section>
+          </div>
+        </main>
+      `;
+    }
+
+    async function loadQuestionBox() {
+      const root = document.querySelector("#questionBoxContent");
+      if (!root || !state.boxId) return;
+
+      try {
+        const data = await questionBoxRequest("get", { boxId: state.boxId });
+        root.innerHTML = `
+          <header class="question-box-head">
+            <div class="eyebrow">ANONYMOUS QUESTION BOX</div>
+            <h1 class="question-box-title">${escapeHTML(data.box.title)}</h1>
+            ${data.box.greeting ? `<p class="question-box-copy">${escapeHTML(data.box.greeting)}</p>` : ""}
+            <span class="box-status">${data.box.isOpen ? "可以匿名提问，不需要登录。" : "这个提问箱暂时暂停接收问题。"}</span>
+          </header>
+
+          ${data.box.isOpen ? `
+            <form class="question-form" onsubmit="submitAnonymousQuestion(event)">
+              <div class="field-group">
+                <label class="field-label" for="anonymousQuestion">想问什么？</label>
+                <textarea id="anonymousQuestion" name="content" class="field inset-field" maxlength="500" required placeholder="写下你的问题……"></textarea>
+              </div>
+              <button class="btn btn-primary tactile" type="submit">匿名提交 →</button>
+            </form>
+          ` : ""}
+
+          <section class="question-list">
+            <div class="eyebrow">已公开的回答</div>
+            ${data.questions.length ? data.questions.map(question => `
+              <article class="question-card">
+                <p>${escapeHTML(question.content)}</p>
+                <p class="question-answer">${escapeHTML(question.answer)}</p>
+              </article>
+            `).join("") : `<div class="empty-state"><strong>还没有公开回答。</strong><p style="margin-top:9px;margin-bottom:0">留下一句想问的话吧。</p></div>`}
+          </section>
+        `;
+        installTactileListeners();
+      } catch (error) {
+        root.innerHTML = `<div class="empty-state"><strong>提问箱没有打开。</strong><p style="margin-top:9px;margin-bottom:0">${escapeHTML(error.message)}</p></div>`;
+      }
+    }
+
+    async function submitAnonymousQuestion(event) {
+      event.preventDefault();
+      const content = new FormData(event.currentTarget).get("content");
+
+      try {
+        await questionBoxRequest("submit", { boxId: state.boxId, content });
+        event.currentTarget.reset();
+        showToast("问题已经匿名送达。 ");
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function managementView() {
+      return `
+        ${navbar()}
+        <main class="page">
+          <div class="shell">
+            <section id="questionBoxContent" class="question-box">
+              <p class="muted">正在打开管理页……</p>
+            </section>
+          </div>
+        </main>
+      `;
+    }
+
+    async function loadQuestionBoxManagement() {
+      const root = document.querySelector("#questionBoxContent");
+      if (!root || !state.boxId || !state.ownerToken) return;
+
+      try {
+        const data = await questionBoxRequest("adminList", {
+          boxId: state.boxId,
+          ownerToken: state.ownerToken
+        });
+        const publicLink = `${location.origin}${location.pathname}#box/${state.boxId}`;
+        const manageLink = `${location.origin}${location.pathname}#manage/${state.boxId}/${state.ownerToken}`;
+
+        root.innerHTML = `
+          <header class="question-box-head">
+            <div class="eyebrow">QUESTION BOX MANAGEMENT</div>
+            <h1 class="question-box-title">${escapeHTML(data.box.title)}</h1>
+            <p class="question-box-copy">这里的内容只有持有这条管理链接的人能看见。公开页只显示你回复过的问题。</p>
+            <div class="admin-actions">
+              <button class="btn btn-primary tactile" type="button" onclick="copyQuestionBoxLink('public')">复制提问链接</button>
+              <button class="btn btn-secondary tactile" type="button" onclick="copyQuestionBoxLink('manage')">复制管理链接</button>
+              <button class="btn btn-secondary tactile" type="button" onclick="setQuestionBoxOpen(${data.box.isOpen ? "false" : "true"})">${data.box.isOpen ? "暂停接收问题" : "重新开启提问箱"}</button>
+            </div>
+            <input id="publicQuestionBoxLink" type="hidden" value="${escapeHTML(publicLink)}">
+            <input id="manageQuestionBoxLink" type="hidden" value="${escapeHTML(manageLink)}">
+          </header>
+
+          <section class="admin-list">
+            <div class="eyebrow">收到的问题 · ${data.questions.length}</div>
+            ${data.questions.length ? data.questions.map(question => `
+              <article class="question-card">
+                <p>${escapeHTML(question.content)}</p>
+                ${question.status === "answered" ? `<p class="question-answer">${escapeHTML(question.answer)}</p>` : ""}
+                <textarea id="answer-${question.id}" class="field inset-field admin-answer-field" maxlength="1000" placeholder="写下你的回答……">${question.status === "answered" ? escapeHTML(question.answer) : ""}</textarea>
+                <div class="admin-actions">
+                  <button class="btn btn-primary tactile" type="button" onclick="answerAnonymousQuestion('${question.id}')">${question.status === "answered" ? "更新回复" : "公开回复"}</button>
+                  <button class="btn btn-secondary tactile" type="button" onclick="removeAnonymousQuestion('${question.id}')">移除</button>
+                </div>
+              </article>
+            `).join("") : `<div class="empty-state"><strong>还没有收到问题。</strong><p style="margin-top:9px;margin-bottom:0">把提问链接发给朋友后，问题会出现在这里。</p></div>`}
+          </section>
+        `;
+        installTactileListeners();
+      } catch (error) {
+        root.innerHTML = `<div class="empty-state"><strong>管理链接无效或已失效。</strong><p style="margin-top:9px;margin-bottom:0">${escapeHTML(error.message)}</p></div>`;
+      }
+    }
+
+    async function answerAnonymousQuestion(questionId) {
+      const answer = document.querySelector(`#answer-${questionId}`).value;
+      try {
+        await questionBoxRequest("answer", {
+          boxId: state.boxId,
+          ownerToken: state.ownerToken,
+          questionId,
+          answer
+        });
+        showToast("回答已公开。 ");
+        loadQuestionBoxManagement();
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    async function removeAnonymousQuestion(questionId) {
+      try {
+        await questionBoxRequest("remove", {
+          boxId: state.boxId,
+          ownerToken: state.ownerToken,
+          questionId
+        });
+        showToast("问题已移除。 ");
+        loadQuestionBoxManagement();
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    async function setQuestionBoxOpen(isOpen) {
+      try {
+        await questionBoxRequest("setOpen", {
+          boxId: state.boxId,
+          ownerToken: state.ownerToken,
+          isOpen
+        });
+        showToast(isOpen ? "提问箱已重新开启。" : "提问箱已暂停接收问题。 ");
+        loadQuestionBoxManagement();
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    async function copyQuestionBoxLink(kind) {
+      const element = document.querySelector(kind === "public" ? "#publicQuestionBoxLink" : "#manageQuestionBoxLink");
+      try {
+        await navigator.clipboard.writeText(element.value);
+        showToast(kind === "public" ? "提问链接已复制。" : "管理链接已复制，请妥善保存。 ");
+      } catch {
+        showToast("复制失败，请直接从地址栏复制。 ");
+      }
     }
 
     /* =========================================================
@@ -3228,6 +3513,22 @@
         return;
       }
 
+      if (hash.startsWith("box/")) {
+        const [, boxId] = hash.split("/");
+        state.view = "question-box";
+        state.boxId = boxId;
+        state.ownerToken = null;
+        return;
+      }
+
+      if (hash.startsWith("manage/")) {
+        const [, boxId, ownerToken] = hash.split("/");
+        state.view = "question-box-management";
+        state.boxId = boxId;
+        state.ownerToken = ownerToken;
+        return;
+      }
+
       if (hash.startsWith("branch/")) {
         const slug = hash.split("/")[1];
 
@@ -3280,6 +3581,16 @@
         app.innerHTML = mineView();
       }
 
+      else if (state.view === "question-box") {
+        app.innerHTML = questionBoxView();
+        loadQuestionBox();
+      }
+
+      else if (state.view === "question-box-management") {
+        app.innerHTML = managementView();
+        loadQuestionBoxManagement();
+      }
+
       installTactileListeners();
     }
 
@@ -3297,6 +3608,12 @@
     window.growSeed = growSeed;
     window.setMineTab = setMineTab;
     window.saveSettings = saveSettings;
+    window.createQuestionBox = createQuestionBox;
+    window.submitAnonymousQuestion = submitAnonymousQuestion;
+    window.answerAnonymousQuestion = answerAnonymousQuestion;
+    window.removeAnonymousQuestion = removeAnonymousQuestion;
+    window.setQuestionBoxOpen = setQuestionBoxOpen;
+    window.copyQuestionBoxLink = copyQuestionBoxLink;
 
   </script>
 </body>
