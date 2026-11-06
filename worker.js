@@ -193,6 +193,12 @@ async function handleQuestionBox(body, env, corsHeaders) {
       return json({ error: "问题不能为空" }, 400, corsHeaders);
     }
 
+    const submitterId = cleanSubmitterId(body.submitterId);
+    if (!submitterId) {
+      return json({ error: "请刷新页面后再提交" }, 400, corsHeaders);
+    }
+    const submitterHash = await sha256(submitterId);
+
     const total = await env.DB
       .prepare("SELECT COUNT(*) AS count FROM questions WHERE box_id = ?")
       .bind(boxId)
@@ -201,10 +207,29 @@ async function handleQuestionBox(body, env, corsHeaders) {
       return json({ error: "这个提问箱暂时收到了很多问题，请稍后再试" }, 429, corsHeaders);
     }
 
-    await env.DB
-      .prepare("INSERT INTO questions (id, box_id, content) VALUES (?, ?, ?)")
-      .bind(crypto.randomUUID(), boxId, content)
-      .run();
+    const existing = await env.DB
+      .prepare(
+        "SELECT id FROM questions WHERE box_id = ? AND submitter_hash = ? AND content = ? LIMIT 1"
+      )
+      .bind(boxId, submitterHash, content)
+      .first();
+    if (existing) {
+      return json({ ok: true, duplicate: true }, 200, corsHeaders);
+    }
+
+    try {
+      await env.DB
+        .prepare(
+          "INSERT INTO questions (id, box_id, submitter_hash, content) VALUES (?, ?, ?, ?)"
+        )
+        .bind(crypto.randomUUID(), boxId, submitterHash, content)
+        .run();
+    } catch (error) {
+      if (String(error.message).includes("UNIQUE constraint failed")) {
+        return json({ ok: true, duplicate: true }, 200, corsHeaders);
+      }
+      throw error;
+    }
 
     return json({ ok: true }, 201, corsHeaders);
   }
@@ -275,6 +300,11 @@ function cleanId(value) {
 function cleanUuid(value) {
   const id = String(value || "");
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : null;
+}
+
+function cleanSubmitterId(value) {
+  const id = String(value || "");
+  return /^[0-9a-f]{32}$/i.test(id) ? id : null;
 }
 
 function randomId(length) {

@@ -1647,6 +1647,19 @@
       localStorage.setItem(key, JSON.stringify(value));
     }
 
+    function questionBoxVisitorId() {
+      const key = "branches.question-box-visitor";
+      const existing = localStorage.getItem(key);
+
+      if (/^[0-9a-f]{32}$/i.test(existing || "")) {
+        return existing;
+      }
+
+      const id = crypto.randomUUID().replaceAll("-", "");
+      localStorage.setItem(key, id);
+      return id;
+    }
+
     function settings() {
       return {
         model: "deepseek-v4-flash",
@@ -2795,9 +2808,13 @@
       const content = new FormData(form).get("content");
 
       try {
-        await questionBoxRequest("submit", { boxId: state.boxId, content });
+        const data = await questionBoxRequest("submit", {
+          boxId: state.boxId,
+          content,
+          submitterId: questionBoxVisitorId()
+        });
         form.reset();
-        showToast("问题已经匿名送达。 ");
+        showToast(data.duplicate ? "这条问题已经送达过了。" : "问题已经匿名送达。 ");
       } catch (error) {
         showToast(error.message);
       }

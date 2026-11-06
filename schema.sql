@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS question_boxes (
 CREATE TABLE IF NOT EXISTS questions (
   id TEXT PRIMARY KEY,
   box_id TEXT NOT NULL,
+  submitter_hash TEXT,
   content TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   answer TEXT,
@@ -20,3 +21,7 @@ CREATE TABLE IF NOT EXISTS questions (
 
 CREATE INDEX IF NOT EXISTS questions_by_box_status
   ON questions (box_id, status, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS questions_unique_submission
+  ON questions (box_id, submitter_hash, content)
+  WHERE submitter_hash IS NOT NULL;
