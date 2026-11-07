@@ -1478,6 +1478,389 @@
       }
     }
 
+    /* Editorial refresh: quiet surfaces, clear hierarchy, one primary action. */
+    :root {
+      --paper: #f7f4ed;
+      --paper-soft: #fcfaf5;
+      --ink: #282b24;
+      --ink-soft: #565d52;
+      --ink-faint: #72796d;
+      --line: rgba(42, 55, 42, .18);
+    }
+
+    body {
+      background: var(--paper);
+    }
+
+    body::before,
+    body::after {
+      display: none;
+    }
+
+    .navbar {
+      height: 72px;
+      background: rgba(247, 244, 237, .96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: none;
+    }
+
+    .brand-cn {
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .brand-en {
+      font-size: 9px;
+      letter-spacing: .16em;
+    }
+
+    .nav-link {
+      border-radius: 0;
+      padding: 10px 13px;
+      font-size: 14px;
+    }
+
+    .nav-link.active,
+    .nav-link:hover {
+      background: transparent;
+      box-shadow: inset 0 -1px var(--ink);
+    }
+
+    .home {
+      min-height: calc(100vh - 72px);
+      padding: 74px 0 90px;
+    }
+
+    .home-inner {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(38px, 7vw, 116px);
+      text-align: left;
+    }
+
+    .home-mark {
+      margin: 0 0 24px;
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 550;
+      letter-spacing: .14em;
+    }
+
+    .hero-title {
+      max-width: none;
+      margin: 0 0 28px;
+      font-size: clamp(54px, 6.7vw, 94px);
+      line-height: 1.13;
+      letter-spacing: -.065em;
+    }
+
+    .hero-description {
+      max-width: 380px;
+      margin: 0 0 43px;
+      font-size: 17px;
+      line-height: 1.8;
+    }
+
+    .home-discover {
+      display: inline-flex;
+      align-items: center;
+      gap: 17px;
+      padding: 0 0 7px;
+      border: 0;
+      border-bottom: 1px solid var(--ink);
+      background: transparent;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .home-discover:hover span {
+      transform: translate(3px, -3px);
+    }
+
+    .home-discover span {
+      transition: transform .2s ease;
+    }
+
+    .home-action {
+      width: 100%;
+    }
+
+    .need-box {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--paper-soft);
+      box-shadow: none;
+    }
+
+    .need-label {
+      display: block;
+      padding: 25px 26px 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .need-input {
+      min-height: 205px;
+      padding: 16px 26px 92px;
+      border-radius: 0;
+      background: transparent;
+      font-size: 16px;
+      resize: vertical;
+    }
+
+    .need-input::placeholder {
+      color: #777d72;
+    }
+
+    .need-submit {
+      right: 20px;
+      bottom: 20px;
+    }
+
+    .tactile,
+    .btn,
+    .btn-secondary {
+      border-radius: 4px;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .tactile::before,
+    .release-glow::after {
+      display: none;
+    }
+
+    .btn-primary {
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper-soft);
+    }
+
+    .btn-secondary {
+      border: 1px solid var(--line);
+      color: var(--ink);
+    }
+
+    .tactile:hover,
+    .tactile:active,
+    .tactile.is-pressed {
+      transform: none;
+      box-shadow: none;
+      filter: none;
+    }
+
+    .btn-primary:hover {
+      background: #424b3e;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--ink);
+    }
+
+    .floating-needs {
+      width: 100%;
+      margin: 16px 0 0;
+      justify-content: flex-start;
+      gap: 6px;
+    }
+
+    .need-chip,
+    .need-chip:nth-child(n) {
+      padding: 8px 10px;
+      border: 0;
+      border-radius: 2px;
+      background: transparent;
+      color: var(--ink-soft);
+      font-size: 12px;
+      animation: none;
+      backdrop-filter: none;
+    }
+
+    .need-chip:hover {
+      transform: none;
+      background: #e9eadf;
+      box-shadow: none;
+    }
+
+    .page-head {
+      margin-bottom: 42px;
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .page-head h1 {
+      margin-bottom: 0;
+      font-size: clamp(42px, 5vw, 68px);
+    }
+
+    .branch-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .branch-node {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      width: 100%;
+      min-height: 224px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--paper-soft);
+      text-align: left;
+    }
+
+    .branch-node::after {
+      width: 138px;
+      height: 138px;
+      right: -45px;
+      bottom: -55px;
+      opacity: .27;
+      filter: blur(36px);
+    }
+
+    .branch-node:hover,
+    .branch-node:active {
+      transform: none;
+      background: #fffef9;
+      box-shadow: none;
+      border-color: #7c897b;
+    }
+
+    .branch-name {
+      max-width: 410px;
+      margin: 0;
+      font-size: clamp(28px, 3vw, 38px);
+      line-height: 1.22;
+    }
+
+    .branch-arrow {
+      top: 26px;
+      right: 27px;
+      color: var(--ink);
+      font-size: 23px;
+    }
+
+    .branch-demo {
+      position: absolute;
+      top: 29px;
+      left: 28px;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+
+    .detail-wrap {
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+      gap: clamp(38px, 7vw, 100px);
+    }
+
+    .detail-title {
+      font-size: clamp(45px, 5.5vw, 76px);
+      line-height: 1.12;
+      text-wrap: balance;
+    }
+
+    .detail-problem {
+      max-width: 540px;
+      margin-bottom: 26px;
+      font-size: 16px;
+    }
+
+    .detail-demo {
+      margin-bottom: 28px;
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .use-panel {
+      top: 96px;
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--paper-soft);
+      box-shadow: none;
+    }
+
+    .inset-field {
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #fffefa;
+      box-shadow: none;
+    }
+
+    .inset-field:focus {
+      border-color: #586b59;
+      background: #fffefa;
+      box-shadow: 0 0 0 3px rgba(88,107,89,.12);
+    }
+
+    .field-label {
+      margin-bottom: 9px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .question-box-title {
+      line-height: 1.13;
+    }
+
+    :is(button, textarea, input, select, a):focus-visible {
+      outline: 2px solid #56705b;
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 880px) {
+      .home-inner {
+        grid-template-columns: 1fr;
+        gap: 50px;
+      }
+
+      .home {
+        min-height: auto;
+      }
+
+      .detail-wrap {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .home {
+        padding: 62px 0 74px;
+      }
+
+      .hero-title {
+        font-size: clamp(52px, 12vw, 68px);
+      }
+
+      .home-inner {
+        gap: 38px;
+      }
+
+      .need-input {
+        min-height: 182px;
+      }
+
+      .branch-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .branch-node {
+        min-height: 184px;
+      }
+
+      .use-panel {
+        padding: 22px;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *,
       *::before,
@@ -1524,6 +1907,7 @@
     const branches = [
       {
         slug: "teach-me-like-this",
+        displayName: "把难读的内容讲明白",
         type: "Knowledge Branch",
         typeZh: "知识枝",
         name: "Teach Me Like This",
@@ -1537,6 +1921,8 @@
 
       {
         slug: "training-branch",
+        displayName: "按今天的状态安排训练",
+        isDemo: true,
         type: "Persona Branch",
         typeZh: "人格枝",
         name: "XXX’s Training Branch",
@@ -1550,6 +1936,7 @@
 
       {
         slug: "less-ai-more-me",
+        displayName: "让文字更像你",
         type: "Skill Branch",
         typeZh: "能力枝",
         name: "Less AI. More Me.",
@@ -1570,6 +1957,8 @@
 
       {
         slug: "morning-trend-radar",
+        displayName: "整理每天值得看的动态",
+        isDemo: true,
         type: "Workflow Branch",
         typeZh: "工作流枝",
         name: "Morning Trend Radar",
@@ -1583,6 +1972,7 @@
 
       {
         slug: "what-do-i-need-today",
+        displayName: "出门前检查要带什么",
         type: "App Branch",
         typeZh: "应用枝",
         name: "What Do I Need Today?",
@@ -1596,6 +1986,7 @@
 
       {
         slug: "friends-anon-question-box",
+        displayName: "收下朋友的匿名问题",
         type: "Link Branch",
         typeZh: "链接枝",
         name: "Friends’ Anonymous Question Box",
@@ -1611,11 +2002,7 @@
     const floatingNeeds = [
       "这篇论文我真的看不进去",
       "AI 写得太像 AI 了",
-      "今天到底该不该训练？",
-      "每天追热点好累",
-      "出门总觉得忘了什么",
-      "想和朋友玩匿名提问",
-      "有没有更适合我的版本？"
+      "想和朋友玩匿名提问"
     ];
 
     const state = {
@@ -1753,14 +2140,14 @@
                 class="nav-link ${active === "branches" ? "active" : ""}"
                 onclick="go('branches')"
               >
-                BRANCHES
+                发现
               </button>
 
               <button
                 class="nav-link ${active === "mine" ? "active" : ""}"
                 onclick="go('mine')"
               >
-                我的枝间
+                我的
               </button>
             </nav>
 
@@ -1779,70 +2166,26 @@
 
         <main class="home">
           <div class="shell">
-
             <section class="home-inner">
-
-              <div class="home-mark">
-                ZHIJIAN · BRANCHES
+              <div class="home-intro">
+                <h1 class="hero-title">从一个小麻烦<br>开始。</h1>
+                <p class="hero-description">说出现在卡住你的事，找到一枝能帮上忙的东西。</p>
+                <button class="home-discover" type="button" onclick="go('branches')">直接看看已有的枝 <span aria-hidden="true">↗</span></button>
               </div>
 
-              <h1 class="hero-title">
-                看见你的需求，<br>
-                多小都值得被看见。
-              </h1>
-
-              <p class="hero-description">
-                说说最近哪里有一点不顺。
-                枝间会理解你的需求，并带你找到已经生长出来、
-                可以直接使用的 Branch。
-                <span class="small-en">
-                  Tell us what feels slightly off.
-                  Find something already grown for it.
-                </span>
-              </p>
-
-              <form
-                class="need-box"
-                onsubmit="submitNeed(event)"
-              >
-                <textarea
-                  id="needInput"
-                  class="need-input"
-                  maxlength="500"
-                  placeholder="最近，有什么小事让你觉得不太顺？"
-                  aria-label="描述你的需求"
-                ></textarea>
-
-                <div class="need-submit">
-                  <button class="btn btn-primary tactile" type="submit">
-                    说说看 →
-                    <span class="small-en">
-                      Find my Branch
-                    </span>
-                  </button>
+              <div class="home-action">
+                <form class="need-box" onsubmit="submitNeed(event)">
+                  <label class="need-label" for="needInput">你现在想解决什么？</label>
+                  <textarea id="needInput" class="need-input" maxlength="500" placeholder="写下一件让你有点不顺的事……"></textarea>
+                  <div class="need-submit">
+                    <button class="btn btn-primary tactile" type="submit">找到适合我的枝 <span aria-hidden="true">→</span></button>
+                  </div>
+                </form>
+                <div class="floating-needs" aria-label="试试这些例子">
+                  ${floatingNeeds.map(text => `<button class="need-chip" type="button" onclick="fillNeed('${escapeHTML(text)}')">${escapeHTML(text)}</button>`).join("")}
                 </div>
-              </form>
-
-              <div class="floating-needs">
-                ${floatingNeeds.map(text => `
-                  <button
-                    class="need-chip"
-                    onclick="fillNeed('${escapeHTML(text)}')"
-                  >
-                    ${escapeHTML(text)}
-                  </button>
-                `).join("")}
               </div>
-
-              <div class="home-footnote">
-                不需要懂 AI，也不需要先知道自己需要什么工具。
-                <span class="small-en">
-                  No installation. No registration. Start with the need.
-                </span>
-              </div>
-
             </section>
-
           </div>
         </main>
       `;
@@ -2031,23 +2374,7 @@
             <div class="page-head">
 
               <div>
-                <div class="eyebrow">
-                  BRANCHES
-                </div>
-
-                <h1 class="editorial">
-                  已经长出来的东西。
-                </h1>
-
-                <p>
-                  Branch 可以是一套知识、一个人的判断体系、
-                  一项能力、一条工作流、一个小应用，
-                  或者一个可以直接打开的链接。
-                  <span class="small-en">
-                    Different forms. Same principle:
-                    born from a real need.
-                  </span>
-                </p>
+                <h1 class="editorial">找到你要的那一枝。</h1>
               </div>
 
             </div>
@@ -2055,7 +2382,8 @@
             <section class="branch-grid">
 
               ${branches.map(branch => `
-                <article
+                <button
+                  type="button"
                   class="branch-node"
                   style="--wash:${branch.color}"
                   onclick="go('branch','${branch.slug}')"
@@ -2063,19 +2391,13 @@
 
                   <span class="branch-arrow">↗</span>
 
-                  <div class="branch-kind">
-                    ${branch.typeZh} · ${branch.type}
-                  </div>
+                  ${branch.isDemo ? `<span class="branch-demo">演示中</span>` : ""}
 
                   <h2 class="branch-name">
-                    ${escapeHTML(branch.name)}
+                    ${escapeHTML(branch.displayName)}
                   </h2>
 
-                  <p class="branch-problem">
-                    ${escapeHTML(branch.problem)}
-                  </p>
-
-                </article>
+                </button>
               `).join("")}
 
             </section>
@@ -2280,55 +2602,30 @@
               class="text-action back"
               onclick="go('branches')"
             >
-              ← 回到所有 Branch
+              ← 返回发现
             </button>
 
             <section class="detail-wrap">
 
               <div>
 
-                <div class="detail-kind eyebrow">
-                  ${branch.typeZh} · ${branch.type}
-                </div>
-
                 <h1 class="detail-title">
-                  ${escapeHTML(branch.name)}
+                  ${escapeHTML(branch.displayName)}
                 </h1>
 
-                <p class="detail-problem">
-                  ${escapeHTML(branch.problem)}
-                </p>
+                ${branch.slug === "friends-anon-question-box" ? "" : `<p class="detail-problem">${escapeHTML(branch.problem)}</p>`}
+
+                ${branch.isDemo ? `<p class="detail-demo">概念演示：此枝尚未连接真实服务。</p>` : ""}
 
                 ${branch.source ? `
                   <div class="source-note">
-                    <span>${escapeHTML(branch.source.note)} · ${escapeHTML(branch.source.label)} · ${escapeHTML(branch.source.license)}</span>
                     <a
                       href="${escapeHTML(branch.source.url)}"
                       target="_blank"
                       rel="noopener noreferrer"
-                      style="margin-left:6px;"
-                    >查看来源 ↗</a>
+                    >基于 ${escapeHTML(branch.source.label)} ↗</a>
                   </div>
-                ` : `
-                  <div class="source-note">
-                    从一个真实的小麻烦开始。
-                    <span class="small-en">
-                      Grown from a real need.
-                    </span>
-                  </div>
-                `}
-
-                <section class="detail-section">
-
-                  <h3>
-                    它会做什么？
-                  </h3>
-
-                  <p>
-                    ${branchDescription(branch.slug)}
-                  </p>
-
-                </section>
+                ` : ""}
 
                 <section
                   id="mockOutput"
@@ -2339,10 +2636,6 @@
               </div>
 
               <aside class="use-panel">
-
-                <div class="panel-label">
-                  试着使用这个 Branch
-                </div>
 
                 <form
                   id="branchForm"
@@ -2357,10 +2650,7 @@
                       type="submit"
                       class="btn btn-primary tactile"
                     >
-                      用用看 →
-                      <span class="small-en">
-                        Use this Branch
-                      </span>
+                      ${branch.slug === "friends-anon-question-box" ? "创建提问箱" : "生成结果"} <span aria-hidden="true">→</span>
                     </button>
 
                     <button
@@ -2368,14 +2658,14 @@
                       class="btn btn-secondary tactile"
                       onclick="toggleSave('${branch.slug}')"
                     >
-                      ${isSaved ? "已保存 ✓" : "保存到我的枝间"}
+                      ${isSaved ? "已收藏 ✓" : "收藏"}
                     </button>
 
                   </div>
 
                 </form>
 
-                <div class="adaptation">
+                ${branch.slug === "friends-anon-question-box" ? "" : `<div class="adaptation">
 
                   <button
                     class="text-action"
@@ -2383,10 +2673,6 @@
                   >
                     好像还差一点
                   </button>
-
-                  <span class="small-en">
-                    Request adaptation
-                  </span>
 
                   <div
                     id="adaptationBox"
@@ -2405,15 +2691,12 @@
                       style="width:100%;margin-top:10px;"
                       onclick="submitAdaptation('${branch.slug}')"
                     >
-                      交给 Personalware
-                      <span class="small-en">
-                        Request adaptation
-                      </span>
+                      记录这个想法
                     </button>
 
                   </div>
 
-                </div>
+                </div>`}
 
               </aside>
 
@@ -2770,7 +3053,6 @@
         const data = await questionBoxRequest("get", { boxId: state.boxId });
         root.innerHTML = `
           <header class="question-box-head">
-            <div class="eyebrow">ANONYMOUS QUESTION BOX</div>
             <h1 class="question-box-title">${escapeHTML(data.box.title)}</h1>
             ${data.box.greeting ? `<p class="question-box-copy">${escapeHTML(data.box.greeting)}</p>` : ""}
             <span class="box-status">${data.box.isOpen ? "可以匿名提问，不需要登录。" : "这个提问箱暂时暂停接收问题。"}</span>
@@ -2847,7 +3129,6 @@
 
         root.innerHTML = `
           <header class="question-box-head">
-            <div class="eyebrow">QUESTION BOX MANAGEMENT</div>
             <h1 class="question-box-title">${escapeHTML(data.box.title)}</h1>
             <p class="question-box-copy">这里的内容只有持有这条管理链接的人能看见。公开页只显示你回复过的问题。</p>
             <div class="admin-actions">
@@ -3103,18 +3384,7 @@
 
               <div>
 
-                <div class="eyebrow">
-                  MY BRANCHES
-                </div>
-
-                <h1 class="editorial">
-                  我的枝间。
-                </h1>
-
-                <p>
-                  这里保存与你有关的 Branch、还没有长成的 Seed、
-                  定制请求和你曾经说过的需求。
-                </p>
+                <h1 class="editorial">我的枝间。</h1>
 
               </div>
 
@@ -3124,9 +3394,9 @@
 
               <nav class="mine-tabs">
 
-                ${mineTabButton("saved", "保存的 Branch")}
-                ${mineTabButton("seeds", "Seeds")}
-                ${mineTabButton("adaptations", "Personalware")}
+                ${mineTabButton("saved", "收藏")}
+                ${mineTabButton("seeds", "想法")}
+                ${mineTabButton("adaptations", "定制")}
                 ${mineTabButton("memory", "记忆")}
                 ${mineTabButton("settings", "设置")}
                 ${mineTabButton("account", "账号")}
