@@ -1886,6 +1886,293 @@
         transition-duration: .01ms !important;
       }
     }
+
+    /* Monet gallery: the paintings carry the scene; quiet panels carry the work. */
+    :root {
+      --paper: #f8eaf0;
+      --paper-soft: #fff9fa;
+      --paper-warm: #f4dde7;
+      --ink: #292d2c;
+      --ink-soft: #4d5653;
+      --ink-faint: #66716d;
+      --line: rgba(86, 91, 80, .18);
+      --shadow-soft: 0 20px 60px rgba(33, 43, 40, .13);
+    }
+
+    body {
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(rgba(255, 246, 249, .84), rgba(255, 246, 249, .88)),
+        var(--page-art);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    body[data-view="home"] {
+      background-image:
+        linear-gradient(90deg, rgba(255, 241, 246, .30), rgba(255, 241, 246, .10)),
+        var(--page-art);
+      background-position: center 48%;
+    }
+
+    body[data-view="mine"] {
+      background-image:
+        linear-gradient(rgba(252, 240, 246, .30), rgba(252, 240, 246, .58)),
+        var(--page-art);
+      background-position: center 34%;
+    }
+
+    body[data-view="branches"] {
+      background-image:
+        linear-gradient(rgba(255, 247, 249, .86), rgba(255, 247, 249, .92)),
+        var(--page-art);
+    }
+
+    .navbar {
+      background: rgba(255, 247, 249, .83);
+      border-bottom-color: rgba(255, 255, 255, .54);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .nav-link.active,
+    .nav-link:hover {
+      box-shadow: inset 0 -2px #8b8f79;
+    }
+
+    .home .shell {
+      width: min(1300px, calc(100% - 48px));
+    }
+
+    .home-inner {
+      gap: clamp(26px, 6vw, 104px);
+    }
+
+    .home-intro,
+    .home-action {
+      border: 1px solid rgba(255, 255, 255, .55);
+      border-radius: 28px;
+      background: rgba(255, 249, 250, .84);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .home-intro {
+      padding: clamp(32px, 4vw, 62px);
+    }
+
+    .home-action {
+      padding: 14px;
+    }
+
+    .hero-title {
+      margin-bottom: 22px;
+      font-size: clamp(52px, 6.4vw, 90px);
+    }
+
+    .hero-description {
+      margin-bottom: 30px;
+    }
+
+    .need-box {
+      border-color: rgba(102, 100, 91, .15);
+      border-radius: 20px;
+      background: rgba(255, 252, 252, .86);
+    }
+
+    .floating-needs {
+      padding: 0 5px 2px;
+    }
+
+    .need-chip,
+    .need-chip:nth-child(n) {
+      color: #414b48;
+      background: rgba(255, 255, 255, .52);
+      border-radius: 999px;
+    }
+
+    .btn-primary {
+      border-color: #52645b;
+      background: #52645b;
+    }
+
+    .btn-primary:hover {
+      background: #394d43;
+    }
+
+    .page {
+      min-height: calc(100vh - 72px);
+    }
+
+    .page-head {
+      width: fit-content;
+      max-width: 100%;
+      padding: 20px 28px;
+      border: 1px solid rgba(255, 255, 255, .64);
+      border-radius: 22px;
+      background: rgba(255, 249, 250, .84);
+      box-shadow: 0 10px 36px rgba(32, 40, 38, .08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .branch-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .branch-node,
+    .branch-node:nth-child(n) {
+      min-height: clamp(320px, 32vw, 430px);
+      padding: 26px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .72);
+      border-radius: 22px;
+      background-image:
+        linear-gradient(180deg, rgba(22, 32, 30, .04) 25%, rgba(22, 32, 30, .83) 100%),
+        var(--art-image);
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 14px 32px rgba(32, 42, 40, .13);
+      color: #fff;
+      transition: transform .25s var(--ease), box-shadow .25s ease;
+    }
+
+    .branch-node::after {
+      display: none;
+    }
+
+    .branch-node:hover,
+    .branch-node:active {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, .82);
+      background-image:
+        linear-gradient(180deg, rgba(22, 32, 30, .02) 25%, rgba(22, 32, 30, .76) 100%),
+        var(--art-image);
+      box-shadow: 0 20px 42px rgba(32, 42, 40, .18);
+    }
+
+    .branch-name {
+      font-size: clamp(26px, 2.7vw, 36px);
+      text-shadow: 0 1px 8px rgba(0, 0, 0, .35);
+    }
+
+    .branch-arrow,
+    .branch-demo {
+      color: #fff;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, .55);
+    }
+
+    .branch-demo {
+      font-weight: 600;
+    }
+
+    .detail-wrap > div:first-child,
+    .use-panel,
+    .mine-grid,
+    .matching-card,
+    .grow-card,
+    .question-box {
+      border: 1px solid rgba(255, 255, 255, .65);
+      border-radius: 26px;
+      background: rgba(255, 249, 250, .91);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .detail-wrap > div:first-child,
+    .mine-grid,
+    .matching-card,
+    .grow-card {
+      padding: clamp(25px, 3vw, 42px);
+    }
+
+    .use-panel {
+      background: rgba(255, 251, 251, .96);
+    }
+
+    .text-action.back {
+      padding: 10px 15px;
+      border-radius: 999px;
+      background: rgba(255, 249, 250, .88);
+    }
+
+    .question-box {
+      max-width: 830px;
+      margin: 42px auto 72px;
+      padding: clamp(26px, 5vw, 68px);
+    }
+
+    .toast {
+      background: rgba(255, 251, 251, .97);
+      color: var(--ink);
+    }
+
+    @media (max-width: 1000px) {
+      .branch-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 880px) {
+      .home-inner {
+        grid-template-columns: 1fr;
+        gap: 22px;
+      }
+
+      .home-intro {
+        max-width: 620px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      body,
+      body[data-view="home"],
+      body[data-view="mine"] {
+        background-attachment: scroll;
+      }
+
+      .home .shell {
+        width: min(100% - 28px, 540px);
+      }
+
+      .home {
+        padding: 28px 0 56px;
+      }
+
+      .home-intro {
+        padding: 26px;
+      }
+
+      .home-action {
+        padding: 10px;
+      }
+
+      .hero-title {
+        font-size: clamp(50px, 12vw, 68px);
+      }
+
+      .branch-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .branch-node,
+      .branch-node:nth-child(n) {
+        min-height: 310px;
+      }
+
+      .mine-grid {
+        padding: 20px;
+      }
+
+      .question-box {
+        margin: 18px auto 48px;
+      }
+    }
   </style>
 </head>
 
@@ -2013,6 +2300,15 @@
         color: "rgba(217,163,182,.46)"
       }
     ];
+
+    const MONET_ART_BY_BRANCH = {
+      "teach-me-like-this": "monet-water-lilies.jpg",
+      "training-branch": "monet-cliff-walk.jpg",
+      "less-ai-more-me": "monet-giverny-spring.jpg",
+      "morning-trend-radar": "monet-antibes.jpg",
+      "what-do-i-need-today": "monet-japanese-bridge.jpg",
+      "friends-anon-question-box": "monet-lily-pond.jpg"
+    };
 
     const floatingNeeds = [
       "这篇论文我真的看不进去",
@@ -2403,7 +2699,7 @@
                 <button
                   type="button"
                   class="branch-node"
-                  style="--wash:${branch.color}"
+                  style="--art-image:url('assets/monet/${MONET_ART_BY_BRANCH[branch.slug]}')"
                   onclick="go('branch','${branch.slug}')"
                 >
 
@@ -3849,6 +4145,23 @@
     ========================================================= */
 
     function render() {
+      const viewArt = {
+        home: "monet-sunrise.jpg",
+        matching: "monet-sunrise.jpg",
+        branches: "monet-water-lilies.jpg",
+        grow: "monet-cliff-walk.jpg",
+        mine: "monet-parasol.jpg",
+        "question-box": "monet-lily-pond.jpg",
+        "question-box-management": "monet-lily-pond.jpg"
+      };
+      const artwork = state.view === "branch"
+        ? MONET_ART_BY_BRANCH[state.currentSlug]
+        : viewArt[state.view];
+      document.body.dataset.view = state.view;
+      document.body.style.setProperty(
+        "--page-art",
+        `url("assets/monet/${artwork || "monet-sunrise.jpg"}")`
+      );
 
       if (state.view === "home") {
         app.innerHTML = homeView();
