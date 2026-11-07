@@ -13,6 +13,10 @@
   "compatibility_date": "2026-09-01",
   // 关掉 Preview URLs：预览地址同样是公开可跑的，会额外消耗 API 额度
   "preview_urls": false,
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "branches-api.dearjenniflora.com", "custom_domain": true }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -21,7 +25,7 @@
     }
   ],
   "vars": {
-    "API_BASE": "https://api.deepseek.com/v1/chat/completions",
-    "MODEL": "deepseek-v4-flash"
+    "API_BASE": "https://api.deepseek.com/chat/completions",
+    "MODEL": "deepseek-flash"
   }
 }

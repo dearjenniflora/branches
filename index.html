@@ -1480,16 +1480,23 @@
 
     /* Editorial refresh: quiet surfaces, clear hierarchy, one primary action. */
     :root {
-      --paper: #f7f4ed;
-      --paper-soft: #fcfaf5;
-      --ink: #282b24;
-      --ink-soft: #565d52;
-      --ink-faint: #72796d;
-      --line: rgba(42, 55, 42, .18);
+      --paper: #fff2f6;
+      --paper-soft: #fffbfc;
+      --paper-warm: #fbe4ec;
+      --ink: #382f36;
+      --ink-soft: #655960;
+      --ink-faint: #8b7880;
+      --rose: #d9a3b6;
+      --rose-soft: #f7dfe8;
+      --sage: #8aa68b;
+      --sage-soft: #e3eee2;
+      --blue: #a9cde2;
+      --blue-soft: #e5f3fa;
+      --line: rgba(143, 99, 117, .16);
     }
 
     body {
-      background: var(--paper);
+      background: radial-gradient(circle at 86% 12%, rgba(237, 208, 222, .28), transparent 32%), var(--paper);
     }
 
     body::before,
@@ -1499,7 +1506,7 @@
 
     .navbar {
       height: 72px;
-      background: rgba(247, 244, 237, .96);
+      background: rgba(255, 247, 250, .95);
       border-bottom: 1px solid var(--line);
       backdrop-filter: none;
     }
@@ -1523,7 +1530,7 @@
     .nav-link.active,
     .nav-link:hover {
       background: transparent;
-      box-shadow: inset 0 -1px var(--ink);
+      box-shadow: inset 0 -2px #be819b;
     }
 
     .home {
@@ -1592,7 +1599,7 @@
       margin: 0;
       padding: 0;
       border: 1px solid var(--line);
-      border-radius: 4px;
+      border-radius: 18px;
       background: var(--paper-soft);
       box-shadow: none;
     }
@@ -1625,7 +1632,7 @@
     .tactile,
     .btn,
     .btn-secondary {
-      border-radius: 4px;
+      border-radius: 12px;
       box-shadow: none;
       background: transparent;
     }
@@ -1636,8 +1643,8 @@
     }
 
     .btn-primary {
-      border: 1px solid var(--ink);
-      background: var(--ink);
+      border: 1px solid #8d5c71;
+      background: #8d5c71;
       color: var(--paper-soft);
     }
 
@@ -1655,7 +1662,7 @@
     }
 
     .btn-primary:hover {
-      background: #424b3e;
+      background: #75495d;
     }
 
     .btn-secondary:hover {
@@ -1673,7 +1680,7 @@
     .need-chip:nth-child(n) {
       padding: 8px 10px;
       border: 0;
-      border-radius: 2px;
+      border-radius: 9px;
       background: transparent;
       color: var(--ink-soft);
       font-size: 12px;
@@ -1683,7 +1690,7 @@
 
     .need-chip:hover {
       transform: none;
-      background: #e9eadf;
+      background: #f9e3eb;
       box-shadow: none;
     }
 
@@ -1711,7 +1718,7 @@
       min-height: 224px;
       padding: 28px;
       border: 1px solid var(--line);
-      border-radius: 4px;
+      border-radius: 18px;
       background: var(--paper-soft);
       text-align: left;
     }
@@ -1728,9 +1735,17 @@
     .branch-node:hover,
     .branch-node:active {
       transform: none;
-      background: #fffef9;
+      background: #ffffff;
       box-shadow: none;
-      border-color: #7c897b;
+      border-color: #d9adbd;
+    }
+
+    .branch-node:nth-child(3n + 2) {
+      background: #f8fcf8;
+    }
+
+    .branch-node:nth-child(3n) {
+      background: #f7fbfd;
     }
 
     .branch-name {
@@ -1782,22 +1797,22 @@
       top: 96px;
       padding: 30px;
       border: 1px solid var(--line);
-      border-radius: 4px;
+      border-radius: 18px;
       background: var(--paper-soft);
       box-shadow: none;
     }
 
     .inset-field {
       border: 1px solid var(--line);
-      border-radius: 4px;
-      background: #fffefa;
+      border-radius: 12px;
+      background: #fffdfd;
       box-shadow: none;
     }
 
     .inset-field:focus {
-      border-color: #586b59;
-      background: #fffefa;
-      box-shadow: 0 0 0 3px rgba(88,107,89,.12);
+      border-color: #b78199;
+      background: #fffdfd;
+      box-shadow: 0 0 0 3px rgba(183,129,153,.14);
     }
 
     .field-label {
@@ -1812,7 +1827,7 @@
     }
 
     :is(button, textarea, input, select, a):focus-visible {
-      outline: 2px solid #56705b;
+      outline: 2px solid #9b7285;
       outline-offset: 3px;
     }
 
@@ -1902,7 +1917,7 @@
     ========================================================= */
 
     const AI_PROXY =
-      "https://branchesai.dearjenniflora.workers.dev";
+      "https://branches-api.dearjenniflora.com";
 
     const branches = [
       {
@@ -1916,7 +1931,7 @@
           "论文", "文章", "阅读", "看不懂", "理解",
           "解释", "学习", "paper", "文献", "知识"
         ],
-        color: "rgba(170,190,199,.34)"
+        color: "rgba(169,205,226,.50)"
       },
 
       {
@@ -1931,7 +1946,7 @@
           "健身", "训练", "运动", "酸痛", "睡眠",
           "器械", "减脂", "增肌", "身体", "周期"
         ],
-        color: "rgba(169,183,161,.35)"
+        color: "rgba(138,166,139,.44)"
       },
 
       {
@@ -1946,7 +1961,7 @@
           "自然", "文案", "写作", "口吻", "机械", "人味",
           "官腔", "机器人", "生硬", "chatgpt", "claude"
         ],
-        color: "rgba(206,176,170,.36)",
+        color: "rgba(217,163,182,.48)",
         source: {
           label: "Humanizer-zh · op7418",
           url: "https://github.com/op7418/Humanizer-zh",
@@ -1967,7 +1982,7 @@
           "热点", "趋势", "行业", "追踪", "监测",
           "推送", "每天", "新闻", "信息", "团队"
         ],
-        color: "rgba(234,220,175,.43)"
+        color: "rgba(169,205,226,.42)"
       },
 
       {
@@ -1981,7 +1996,7 @@
           "出门", "行李", "忘东西", "旅行", "会议",
           "清单", "带什么", "收拾", "准备", "check"
         ],
-        color: "rgba(174,194,182,.34)"
+        color: "rgba(138,166,139,.42)"
       },
 
       {
@@ -1995,7 +2010,7 @@
           "匿名", "提问箱", "朋友", "群聊", "真心话",
           "爆料", "夸夸", "整活", "问卷", "匿名提问"
         ],
-        color: "rgba(201,177,200,.29)"
+        color: "rgba(217,163,182,.46)"
       }
     ];
 
@@ -2011,7 +2026,8 @@
       lastNeed: "",
       mineTab: "saved",
       boxId: null,
-      ownerToken: null
+      ownerToken: null,
+      matchUnavailable: false
     };
 
     const app = document.querySelector("#app");
@@ -2049,7 +2065,7 @@
 
     function settings() {
       return {
-        model: "deepseek-v4-flash",
+        model: "deepseek-flash",
         apiBase: "",
         apiKey: "",
         ...read(STORAGE.settings, {})
@@ -2252,6 +2268,7 @@
       }
 
       state.lastNeed = need;
+      state.matchUnavailable = false;
       rememberNeed(need);
 
       state.view = "matching";
@@ -2302,6 +2319,7 @@
 
       } catch (error) {
         console.error("AI matcher failed:", error);
+        state.matchUnavailable = true;
 
         /*
           AI 暂时挂掉时，不让产品直接死掉。
@@ -2313,7 +2331,7 @@
         await settle();
 
         if (fallback) {
-          showToast("AI 暂时没有回应，已使用本地匹配。");
+          showToast("匹配服务暂时繁忙，已按关键词查找。");
 
           go("branch", fallback.slug);
 
@@ -3291,6 +3309,7 @@
     ========================================================= */
 
     function growView() {
+      const unavailable = state.matchUnavailable;
       return `
         ${navbar()}
 
@@ -3301,22 +3320,14 @@
 
               <div class="seed"></div>
 
-              <div class="eyebrow">
-                NO MATCH YET
-              </div>
-
               <h1 class="grow-title">
-                那就让第一个长出来。
+                ${unavailable ? "匹配暂时没连上。" : "那就让第一个长出来。"}
               </h1>
 
               <p class="grow-copy">
-                目前还没有足够接近的 Branch。
-                这不意味着你的需求太小，
-                只是它还没有被收录。
-                <span class="small-en">
-                  No close match yet.
-                  Your need can become a seed.
-                </span>
+                ${unavailable
+                  ? "你可以先浏览现有的枝，稍后再试一次匹配。"
+                  : "目前还没有足够接近的枝。你可以把这个想法留在这里。"}
               </p>
 
               <div class="grow-need">
@@ -3325,12 +3336,9 @@
 
               <button
                 class="btn btn-primary tactile"
-                onclick="growSeed()"
+                onclick="${unavailable ? "go('branches')" : "growSeed()"}"
               >
-                Grow the first one
-                <span class="small-en">
-                  把它变成一颗 seed
-                </span>
+                ${unavailable ? "浏览已有的枝" : "留下这个想法"}
               </button>
 
               <div style="margin-top:22px">
@@ -3593,10 +3601,10 @@
                 class="field inset-field"
               >
                 <option
-                  value="deepseek-v4-flash"
-                  ${s.model === "deepseek-v4-flash" ? "selected" : ""}
+                  value="deepseek-flash"
+                  ${s.model === "deepseek-flash" ? "selected" : ""}
                 >
-                  deepseek-v4-flash
+                  deepseek-flash
                 </option>
 
                 <option
