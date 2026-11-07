@@ -1,10 +1,10 @@
 # Monet artwork sources
 
-The paintings are by Claude Monet. ArtiFair provides these images as public domain artwork resources. The site stores local copies so the design does not depend on third-party image hotlinks.
+The paintings are by Claude Monet. The homepage image was supplied by the site owner. ArtiFair provides the other images as public domain artwork resources. The site stores local copies so the design does not depend on third-party image hotlinks.
 
 | Local file | Painting | Source |
 | --- | --- | --- |
-| `monet-sunrise.jpg` | Impression, Sunrise | https://artifair.com/zh/artwork/KYY0QFXyUSg2AOvsOwvQ |
+| `monet-sunrise.png` | Impression, Sunrise | Image supplied by the site owner |
 | `monet-parasol.jpg` | Woman with a Parasol — Madame Monet and Her Son | https://artifair.com/zh/artwork/BU8HLf8bQPb1moENkBrA |
 | `monet-water-lilies.jpg` | Water Lilies | https://artifair.com/zh/artwork/Pf0PMFsdysUTWa54M0ud |
 | `monet-lily-pond.jpg` | Water Lily Pond | https://artifair.com/zh/artwork/1KOiZ7nsUBAdLGdH3EL7 |

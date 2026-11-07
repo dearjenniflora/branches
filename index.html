@@ -4146,8 +4146,8 @@
 
     function render() {
       const viewArt = {
-        home: "monet-sunrise.jpg",
-        matching: "monet-sunrise.jpg",
+        home: "monet-sunrise.png",
+        matching: "monet-sunrise.png",
         branches: "monet-water-lilies.jpg",
         grow: "monet-cliff-walk.jpg",
         mine: "monet-parasol.jpg",
@@ -4160,7 +4160,7 @@
       document.body.dataset.view = state.view;
       document.body.style.setProperty(
         "--page-art",
-        `url("assets/monet/${artwork || "monet-sunrise.jpg"}")`
+        `url("assets/monet/${artwork || "monet-sunrise.png"}")`
       );
 
       if (state.view === "home") {
