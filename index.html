@@ -2571,12 +2571,221 @@
         font-size: 28px;
       }
     }
+
+    /* Organic fluidity: brief feedback, restrained travel, no ambient spectacle. */
+    :root {
+      --motion-press: 130ms;
+      --motion-quick: 190ms;
+      --motion-content: 320ms;
+      --motion-space: 420ms;
+      --motion-ease: cubic-bezier(.22, .78, .25, 1);
+    }
+
+    html { scroll-behavior: auto; }
+    .page { animation: none; }
+    .navbar { view-transition-name: site-nav; }
+    .nav-link.active { view-transition-name: active-nav; }
+    html[data-transition="tab"] .mine-content { view-transition-name: mine-content; }
+    html[data-transition="tab"] .mine-tab.active { view-transition-name: mine-active-tab; }
+
+    :is(.home-intro, .home-action, .need-box, .page-head, .use-panel,
+      .mine-grid, .matching-card, .grow-card, .question-box, .saved-item,
+      .question-card, .record, .mock-output, .empty-state, .settings-card,
+      .branch-node, .btn, .need-chip, .mine-tab, .nav-link,
+      .home-discover, .text-action, .brand) {
+      transition:
+        transform var(--motion-content) var(--motion-ease),
+        box-shadow var(--motion-content) ease,
+        border-color var(--motion-quick) ease,
+        background-color var(--motion-quick) ease,
+        filter var(--motion-quick) ease,
+        opacity var(--motion-quick) ease;
+    }
+
+    .inset-field,
+    .need-input,
+    .need-box {
+      transition:
+        box-shadow 210ms ease,
+        border-color 210ms ease,
+        background-color 210ms ease,
+        transform 210ms var(--motion-ease);
+    }
+
+    .need-box:focus-within {
+      border-color: rgba(255, 255, 255, .98);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .98),
+        0 0 0 3px rgba(202, 224, 237, .36),
+        0 17px 36px rgba(28, 47, 58, .11);
+    }
+
+    .inset-field:focus {
+      transform: translateY(-1px);
+    }
+
+    .btn[data-pressed],
+    .branch-node[data-pressed],
+    .need-chip[data-pressed],
+    .nav-link[data-pressed],
+    .mine-tab[data-pressed],
+    .home-discover[data-pressed],
+    .text-action[data-pressed],
+    .brand[data-pressed] {
+      transform: translate3d(0, 1px, 0) scale(.986) !important;
+      filter: brightness(.98);
+      transition-duration: var(--motion-press) !important;
+    }
+
+    .btn[data-pressed],
+    .branch-node[data-pressed] {
+      box-shadow:
+        inset 0 2px 5px rgba(43, 68, 80, .11),
+        inset 0 1px 0 rgba(255, 255, 255, .75),
+        0 4px 12px rgba(24, 45, 57, .07);
+    }
+
+    .toast {
+      transform: translate(-50%, 10px) scale(.975);
+      transition:
+        transform 280ms var(--motion-ease),
+        opacity 190ms ease,
+        box-shadow 190ms ease;
+    }
+
+    .toast.show {
+      transform: translate(-50%, 0) scale(1);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .96),
+        0 15px 35px rgba(24, 45, 57, .13);
+    }
+
+    .mock-output[data-entering] {
+      animation: contentArrive 320ms var(--motion-ease) both;
+    }
+
+    .mock-output {
+      animation: contentArrive 320ms var(--motion-ease) both;
+    }
+
+    #adaptationBox {
+      transform-origin: top center;
+      transition:
+        max-height 340ms var(--motion-ease),
+        opacity 190ms ease,
+        transform 280ms var(--motion-ease);
+    }
+
+    @keyframes contentArrive {
+      from { opacity: 0; transform: translate3d(0, 7px, 0) scale(.992); }
+      to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      :is(.home-intro, .home-action, .page-head, .use-panel,
+        .saved-item, .question-card, .record):hover {
+        transform: translate3d(0, -2px, 0);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, .98),
+          inset 1px 0 0 rgba(255, 255, 255, .42),
+          inset 0 -1px 0 rgba(162, 191, 207, .32),
+          0 18px 37px rgba(24, 45, 57, .12);
+      }
+
+      :is(.btn, .need-chip, .mine-tab, .nav-link,
+        .home-discover, .text-action, .brand):hover {
+        transform: translate3d(0, -1px, 0);
+      }
+
+      .branch-node:hover {
+        transform: translate3d(0, -3px, 0);
+      }
+
+      :is(.home-intro, .home-action, .use-panel, .saved-item,
+        .question-card, .branch-node):hover {
+        filter: brightness(1.018);
+      }
+    }
+
+    @media (hover: none) {
+      :is(.branch-node, .btn, .need-chip, .mine-tab, .nav-link,
+        .home-discover, .text-action, .brand):hover {
+        transform: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      @keyframes viewLeave {
+        to { opacity: 0; transform: translate3d(0, -5px, 0) scale(.995); }
+      }
+      @keyframes viewEnter {
+        from { opacity: 0; transform: translate3d(0, 8px, 0) scale(.992); }
+      }
+      @keyframes panelLeave {
+        to { opacity: 0; transform: translate3d(0, -4px, 0); }
+      }
+      @keyframes panelEnter {
+        from { opacity: 0; transform: translate3d(0, 5px, 0); }
+      }
+
+      ::view-transition-old(root) {
+        animation: viewLeave 220ms ease both;
+      }
+      ::view-transition-new(root) {
+        animation: viewEnter 340ms var(--motion-ease) both;
+      }
+      ::view-transition-group(site-nav) {
+        animation-duration: 220ms;
+        animation-timing-function: var(--motion-ease);
+      }
+      ::view-transition-group(active-nav) {
+        animation-duration: 300ms;
+        animation-timing-function: var(--motion-ease);
+      }
+      ::view-transition-group(branch-surface) {
+        animation-duration: var(--motion-space);
+        animation-timing-function: var(--motion-ease);
+      }
+      ::view-transition-old(branch-surface),
+      ::view-transition-new(branch-surface) {
+        height: 100%;
+        object-fit: cover;
+      }
+      html[data-transition="tab"] ::view-transition-old(root),
+      html[data-transition="tab"] ::view-transition-new(root),
+      html[data-transition="list"] ::view-transition-old(root),
+      html[data-transition="list"] ::view-transition-new(root) {
+        animation: none;
+      }
+      ::view-transition-group(mine-active-tab) {
+        animation-duration: 300ms;
+        animation-timing-function: var(--motion-ease);
+      }
+      ::view-transition-old(mine-content) {
+        animation: panelLeave 150ms ease both;
+      }
+      ::view-transition-new(mine-content) {
+        animation: panelEnter 300ms var(--motion-ease) both;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto !important; }
+      .toast, .inset-field, .need-box, .btn, .branch-node {
+        transition-duration: .01ms !important;
+      }
+      ::view-transition-group(*),
+      ::view-transition-old(*),
+      ::view-transition-new(*) {
+        animation-duration: .01ms !important;
+      }
+    }
   </style>
 </head>
 
 <body>
   <div id="app"></div>
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script>
     /* =========================================================
@@ -2726,6 +2935,57 @@
 
     const app = document.querySelector("#app");
     const toast = document.querySelector("#toast");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let activeViewTransition = null;
+    let viewUpdateSequence = 0;
+    let matchSequence = 0;
+
+    function motionAvailable() {
+      return !reducedMotion.matches && typeof document.startViewTransition === "function";
+    }
+
+    function focusMainHeading() {
+      const heading = app.querySelector("main h1") || app.querySelector("main");
+      if (!heading) return;
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
+
+    function updateWithMotion(update, options = {}) {
+      const sequence = ++viewUpdateSequence;
+      activeViewTransition?.skipTransition();
+      activeViewTransition = null;
+
+      if (!motionAvailable()) {
+        update();
+        options.afterUpdate?.();
+        if (options.focus) focusMainHeading();
+        options.onFinish?.();
+        return null;
+      }
+
+      document.documentElement.dataset.transition = options.kind || "page";
+      const transition = document.startViewTransition(() => {
+        if (sequence !== viewUpdateSequence) return;
+        update();
+        options.afterUpdate?.();
+      });
+      activeViewTransition = transition;
+
+      transition.updateCallbackDone.then(() => {
+        if (options.focus && activeViewTransition === transition) focusMainHeading();
+      }).catch(() => {});
+
+      transition.finished.finally(() => {
+        options.onFinish?.();
+        if (activeViewTransition === transition) {
+          activeViewTransition = null;
+          delete document.documentElement.dataset.transition;
+        }
+      }).catch(() => {});
+
+      return transition;
+    }
 
     /* =========================================================
        STORAGE
@@ -2804,17 +3064,21 @@
     }
 
     function go(view, slug = null) {
-      state.view = view;
-      state.currentSlug = slug;
-
-      if (view === "branch" && slug) {
-        location.hash = `branch/${slug}`;
-      } else {
-        location.hash = view;
+      const target = view === "branch" && slug ? `branch/${slug}` : view;
+      if (location.hash === `#${target}`) {
+        if (state.view === view && (view !== "branch" || state.currentSlug === slug)) {
+          window.scrollTo(0, 0);
+        } else {
+          updateWithMotion(() => {
+            state.view = view;
+            state.currentSlug = slug;
+            render();
+            window.scrollTo(0, 0);
+          }, { kind: "page", focus: true });
+        }
+        return;
       }
-
-      render();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      location.hash = target;
     }
 
     /* =========================================================
@@ -2964,20 +3228,13 @@
       state.lastNeed = need;
       state.matchUnavailable = false;
       rememberNeed(need);
+      const requestId = ++matchSequence;
 
       state.view = "matching";
-      render();
-
-      /* 「正在寻找」的画面至少停 720ms，避免一闪而过 */
-      const started = Date.now();
-
-      const settle = async () => {
-        const rest = 720 - (Date.now() - started);
-
-        if (rest > 0) {
-          await new Promise(resolve => setTimeout(resolve, rest));
-        }
-      };
+      updateWithMotion(() => {
+        render();
+        window.scrollTo(0, 0);
+      }, { kind: "page", focus: true });
 
       try {
         const response = await fetch(AI_PROXY, {
@@ -3001,14 +3258,12 @@
 
         console.log("枝间 AI 匹配：", result);
 
-        await settle();
+        if (requestId !== matchSequence || state.view !== "matching") return;
 
         if (result.slug && getBranch(result.slug)) {
           go("branch", result.slug);
         } else {
-          state.view = "grow";
-          location.hash = "grow";
-          render();
+          go("grow");
         }
 
       } catch (error) {
@@ -3022,7 +3277,7 @@
 
         const fallback = matchNeed(need);
 
-        await settle();
+        if (requestId !== matchSequence || state.view !== "matching") return;
 
         if (fallback) {
           showToast("匹配服务暂时繁忙，已按关键词查找。");
@@ -3030,9 +3285,7 @@
           go("branch", fallback.slug);
 
         } else {
-          state.view = "grow";
-          location.hash = "grow";
-          render();
+          go("grow");
         }
       }
     }
@@ -3097,6 +3350,7 @@
                 <button
                   type="button"
                   class="branch-node"
+                  data-slug="${branch.slug}"
                   style="--art-image:url('assets/monet/${MONET_ART_BY_BRANCH[branch.slug]}')"
                   onclick="go('branch','${branch.slug}')"
                 >
@@ -3368,6 +3622,7 @@
                     <button
                       type="button"
                       class="btn btn-secondary tactile"
+                      aria-pressed="${isSaved}"
                       onclick="toggleSave('${branch.slug}')"
                     >
                       ${isSaved ? "已收藏 ✓" : "收藏"}
@@ -3447,8 +3702,14 @@
        RUN MOCK
     ========================================================= */
 
+    let branchRunController = null;
+    let branchRunSequence = 0;
+
     async function runBranch(event, slug) {
       event.preventDefault();
+      branchRunController?.abort();
+      branchRunController = new AbortController();
+      const requestId = ++branchRunSequence;
 
       const form = event.currentTarget;
       const values = Object.fromEntries(new FormData(form).entries());
@@ -3472,13 +3733,14 @@
       `;
 
       output.scrollIntoView({
-        behavior: "smooth",
+        behavior: reducedMotion.matches ? "auto" : "smooth",
         block: "start"
       });
 
       try {
         const response = await fetch(AI_PROXY, {
           method: "POST",
+          signal: branchRunController.signal,
 
           headers: {
             "Content-Type": "application/json"
@@ -3496,6 +3758,8 @@
         }
 
         const data = await response.json();
+        if (requestId !== branchRunSequence || !output.isConnected ||
+            state.view !== "branch" || state.currentSlug !== slug) return;
 
         output.innerHTML = `
           <div class="mock-output">
@@ -3513,6 +3777,8 @@
         `;
 
       } catch (error) {
+        if (error.name === "AbortError" || requestId !== branchRunSequence ||
+            !output.isConnected || state.view !== "branch" || state.currentSlug !== slug) return;
         console.error("Branch AI failed:", error);
 
         /*
@@ -3757,13 +4023,49 @@
       `;
     }
 
+    function replaceQuestionBoxMarkup(root, markup) {
+      const oldCards = [...root.querySelectorAll("[data-motion-key]")];
+      if (!oldCards.length || !motionAvailable()) {
+        root.innerHTML = markup;
+        return;
+      }
+
+      const named = [];
+      const marker = Symbol("list-transition");
+      const nameCards = cards => cards.forEach(card => {
+        const key = card.dataset.motionKey.replace(/[^a-zA-Z0-9_-]/g, "-");
+        card._viewMotionMarker = marker;
+        card.style.viewTransitionName = `card-${key}`;
+        named.push(card);
+      });
+      nameCards(oldCards);
+      updateWithMotion(() => {
+        root.innerHTML = markup;
+        nameCards(root.querySelectorAll("[data-motion-key]"));
+      }, {
+        kind: "list",
+        onFinish: () => named.forEach(card => {
+          if (card._viewMotionMarker !== marker) return;
+          card.style.removeProperty("view-transition-name");
+          delete card._viewMotionMarker;
+        })
+      });
+    }
+
+    let publicBoxLoadSequence = 0;
+    let managementLoadSequence = 0;
+
     async function loadQuestionBox() {
       const root = document.querySelector("#questionBoxContent");
       if (!root || !state.boxId) return;
+      const boxId = state.boxId;
+      const requestId = ++publicBoxLoadSequence;
 
       try {
-        const data = await questionBoxRequest("get", { boxId: state.boxId });
-        root.innerHTML = `
+        const data = await questionBoxRequest("get", { boxId });
+        if (requestId !== publicBoxLoadSequence || !root.isConnected ||
+            state.boxId !== boxId || state.view !== "question-box") return;
+        replaceQuestionBoxMarkup(root, `
           <header class="question-box-head">
             <h1 class="question-box-title">${escapeHTML(data.box.title)}</h1>
             ${data.box.greeting ? `<p class="question-box-copy">${escapeHTML(data.box.greeting)}</p>` : ""}
@@ -3783,16 +4085,18 @@
           <section class="question-list">
             <div class="eyebrow">已公开的回答</div>
             ${data.questions.length ? data.questions.map(question => `
-              <article class="question-card">
+              <article class="question-card" data-motion-key="question-${question.id}">
                 <p>${escapeHTML(question.content)}</p>
                 <p class="question-answer">${escapeHTML(question.answer)}</p>
               </article>
             `).join("") : `<div class="empty-state"><strong>还没有公开回答。</strong><p style="margin-top:9px;margin-bottom:0">留下一句想问的话吧。</p></div>`}
           </section>
-        `;
+        `);
         installTactileListeners();
       } catch (error) {
-        root.innerHTML = `<div class="empty-state"><strong>提问箱没有打开。</strong><p style="margin-top:9px;margin-bottom:0">${escapeHTML(error.message)}</p></div>`;
+        if (requestId === publicBoxLoadSequence && root.isConnected && state.boxId === boxId) {
+          root.innerHTML = `<div class="empty-state"><strong>提问箱没有打开。</strong><p style="margin-top:9px;margin-bottom:0">${escapeHTML(error.message)}</p></div>`;
+        }
       }
     }
 
@@ -3830,16 +4134,21 @@
     async function loadQuestionBoxManagement() {
       const root = document.querySelector("#questionBoxContent");
       if (!root || !state.boxId || !state.ownerToken) return;
+      const boxId = state.boxId;
+      const ownerToken = state.ownerToken;
+      const requestId = ++managementLoadSequence;
 
       try {
         const data = await questionBoxRequest("adminList", {
-          boxId: state.boxId,
-          ownerToken: state.ownerToken
+          boxId,
+          ownerToken
         });
-        const publicLink = `${location.origin}${location.pathname}#box/${state.boxId}`;
-        const manageLink = `${location.origin}${location.pathname}#manage/${state.boxId}/${state.ownerToken}`;
+        if (requestId !== managementLoadSequence || !root.isConnected || state.boxId !== boxId ||
+            state.ownerToken !== ownerToken || state.view !== "question-box-management") return;
+        const publicLink = `${location.origin}${location.pathname}#box/${boxId}`;
+        const manageLink = `${location.origin}${location.pathname}#manage/${boxId}/${ownerToken}`;
 
-        root.innerHTML = `
+        replaceQuestionBoxMarkup(root, `
           <header class="question-box-head">
             <h1 class="question-box-title">${escapeHTML(data.box.title)}</h1>
             <p class="question-box-copy">这里的内容只有持有这条管理链接的人能看见。公开页只显示你回复过的问题。</p>
@@ -3855,7 +4164,7 @@
           <section class="admin-list">
             <div class="eyebrow">收到的问题 · ${data.questions.length}</div>
             ${data.questions.length ? data.questions.map(question => `
-              <article class="question-card">
+              <article class="question-card" data-motion-key="question-${question.id}">
                 <p>${escapeHTML(question.content)}</p>
                 ${question.status === "answered" ? `<p class="question-answer">${escapeHTML(question.answer)}</p>` : ""}
                 <textarea id="answer-${question.id}" class="field inset-field admin-answer-field" maxlength="1000" placeholder="写下你的回答……">${question.status === "answered" ? escapeHTML(question.answer) : ""}</textarea>
@@ -3866,10 +4175,13 @@
               </article>
             `).join("") : `<div class="empty-state"><strong>还没有收到问题。</strong><p style="margin-top:9px;margin-bottom:0">把提问链接发给朋友后，问题会出现在这里。</p></div>`}
           </section>
-        `;
+        `);
         installTactileListeners();
       } catch (error) {
-        root.innerHTML = `<div class="empty-state"><strong>管理链接无效或已失效。</strong><p style="margin-top:9px;margin-bottom:0">${escapeHTML(error.message)}</p></div>`;
+        if (requestId === managementLoadSequence && root.isConnected &&
+            state.boxId === boxId && state.ownerToken === ownerToken) {
+          root.innerHTML = `<div class="empty-state"><strong>管理链接无效或已失效。</strong><p style="margin-top:9px;margin-bottom:0">${escapeHTML(error.message)}</p></div>`;
+        }
       }
     }
 
@@ -3933,8 +4245,9 @@
 
     function toggleSave(slug) {
       let saved = read(STORAGE.saved);
+      const wasSaved = saved.includes(slug);
 
-      if (saved.includes(slug)) {
+      if (wasSaved) {
         saved = saved.filter(item => item !== slug);
         showToast("已经从我的枝间移除。");
       } else {
@@ -3943,18 +4256,78 @@
       }
 
       write(STORAGE.saved, saved);
-      render();
+      const button = document.querySelector(".use-actions .btn-secondary");
+      if (button && state.view === "branch" && state.currentSlug === slug) {
+        button.textContent = wasSaved ? "收藏" : "已收藏 ✓";
+        button.setAttribute("aria-pressed", String(!wasSaved));
+        if (!reducedMotion.matches && typeof button.animate === "function") {
+          button.animate(
+            [{ opacity: .72, transform: "scale(.985)" }, { opacity: 1, transform: "scale(1)" }],
+            { duration: 210, easing: "cubic-bezier(.22,.78,.25,1)" }
+          );
+        }
+      }
     }
 
     /* =========================================================
        ADAPTATION
     ========================================================= */
 
+    let adaptationToggleToken = 0;
+
     function toggleAdaptation() {
-      document
-        .querySelector("#adaptationBox")
-        ?.classList
-        .toggle("hidden");
+      const box = document.querySelector("#adaptationBox");
+      if (!box) return;
+      const opening = box.classList.contains("hidden") || box.dataset.closing === "true";
+      const token = ++adaptationToggleToken;
+
+      if (reducedMotion.matches) {
+        box.classList.toggle("hidden", !opening);
+        box.dataset.closing = "false";
+        box.style.removeProperty("max-height");
+        box.style.removeProperty("opacity");
+        box.style.removeProperty("transform");
+        return;
+      }
+
+      box.dataset.closing = String(!opening);
+      box.style.overflow = "hidden";
+      if (opening) {
+        if (box.classList.contains("hidden")) {
+          box.classList.remove("hidden");
+          box.style.maxHeight = "0px";
+          box.style.opacity = "0";
+          box.style.transform = "translateY(-6px) scale(.99)";
+        }
+        requestAnimationFrame(() => {
+          if (token !== adaptationToggleToken) return;
+          box.style.maxHeight = `${box.scrollHeight + 8}px`;
+          box.style.opacity = "1";
+          box.style.transform = "none";
+        });
+      } else {
+        box.style.maxHeight = `${box.getBoundingClientRect().height}px`;
+        requestAnimationFrame(() => {
+          if (token !== adaptationToggleToken) return;
+          box.style.maxHeight = "0px";
+          box.style.opacity = "0";
+          box.style.transform = "translateY(-6px) scale(.99)";
+        });
+      }
+
+      box.addEventListener("transitionend", event => {
+        if (event.propertyName !== "max-height" || token !== adaptationToggleToken) return;
+        if (!opening) box.classList.add("hidden");
+        box.style.removeProperty("max-height");
+        box.style.removeProperty("opacity");
+        box.style.removeProperty("transform");
+        box.style.removeProperty("overflow");
+        box._motionController?.abort();
+      }, { once: false, signal: (() => {
+        box._motionController?.abort();
+        box._motionController = new AbortController();
+        return box._motionController.signal;
+      })() });
     }
 
     function submitAdaptation(slug) {
@@ -4120,6 +4493,8 @@
       return `
         <button
           class="mine-tab ${state.mineTab === id ? "active" : ""}"
+          data-tab="${id}"
+          aria-pressed="${state.mineTab === id}"
           onclick="setMineTab('${id}')"
         >
           ${label}
@@ -4128,8 +4503,19 @@
     }
 
     function setMineTab(tab) {
-      state.mineTab = tab;
-      render();
+      if (state.mineTab === tab) return;
+      const content = document.querySelector(".mine-content");
+      if (!content) return;
+
+      updateWithMotion(() => {
+        state.mineTab = tab;
+        document.querySelectorAll(".mine-tab").forEach(button => {
+          const active = button.dataset.tab === tab;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+        content.innerHTML = mineTabContent();
+      }, { kind: "tab" });
     }
 
     function mineTabContent() {
@@ -4153,7 +4539,7 @@
               if (!branch) return "";
 
               return `
-                <article class="saved-item">
+                <article class="saved-item" data-motion-key="saved-${branch.slug}">
 
                   <div class="eyebrow">
                     ${branch.typeZh}
@@ -4428,51 +4814,44 @@
        PRESS / RELEASE PHYSICS
     ========================================================= */
 
+    let tactileListenersInstalled = false;
+    let pressedControl = null;
+
     function installTactileListeners() {
+      if (tactileListenersInstalled) return;
+      tactileListenersInstalled = true;
 
-      document
-        .querySelectorAll(".tactile")
-        .forEach(button => {
+      const clearPress = () => {
+        pressedControl?.removeAttribute("data-pressed");
+        pressedControl = null;
+      };
 
-          button.addEventListener(
-            "pointerdown",
-            () => {
-              button.classList.add("is-pressed");
-            }
-          );
+      document.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || !(event.target instanceof Element)) return;
+        const control = event.target.closest("button, [role='button']");
+        if (!control || control.disabled) return;
+        clearPress();
+        pressedControl = control;
+        control.setAttribute("data-pressed", "");
+      }, { passive: true });
 
-          const release = () => {
-            button.classList.remove("is-pressed");
-            button.classList.remove("release-glow");
+      document.addEventListener("pointerup", clearPress, { passive: true });
+      document.addEventListener("pointercancel", clearPress, { passive: true });
+      document.addEventListener("pointerleave", event => {
+        if (event.target === pressedControl) clearPress();
+      }, true);
 
-            void button.offsetWidth;
-
-            button.classList.add("release-glow");
-
-            setTimeout(() => {
-              button.classList.remove("release-glow");
-            }, 500);
-          };
-
-          button.addEventListener(
-            "pointerup",
-            release
-          );
-
-          button.addEventListener(
-            "pointerleave",
-            () => {
-              button.classList.remove("is-pressed");
-            }
-          );
-
-          button.addEventListener(
-            "pointercancel",
-            () => {
-              button.classList.remove("is-pressed");
-            }
-          );
-        });
+      document.addEventListener("keydown", event => {
+        if (event.repeat || !["Enter", " "].includes(event.key)) return;
+        if (!(event.target instanceof Element)) return;
+        const control = event.target.closest("button, [role='button']");
+        if (!control || control.disabled) return;
+        clearPress();
+        pressedControl = control;
+        control.setAttribute("data-pressed", "");
+      });
+      document.addEventListener("keyup", clearPress);
+      window.addEventListener("blur", clearPress);
     }
 
     /* =========================================================
@@ -4533,8 +4912,48 @@
     window.addEventListener(
       "hashchange",
       () => {
+        const previousView = state.view;
+        const previousSlug = state.currentSlug;
         routeFromHash();
-        render();
+        if (previousView === "branch" &&
+            (state.view !== "branch" || state.currentSlug !== previousSlug)) {
+          branchRunController?.abort();
+        }
+        const opening = previousView === "branches" && state.view === "branch";
+        const closing = previousView === "branch" && state.view === "branches";
+        const source = opening
+          ? app.querySelector(`.branch-node[data-slug="${state.currentSlug}"]`)
+          : closing ? app.querySelector(".detail-wrap > div:first-child") : null;
+        let target = null;
+        const marker = Symbol("branch-transition");
+
+        if (source && motionAvailable()) {
+          source._viewMotionMarker = marker;
+          source.style.viewTransitionName = "branch-surface";
+        }
+        updateWithMotion(() => {
+          render();
+          window.scrollTo(0, 0);
+        }, {
+          kind: opening ? "branch-open" : closing ? "branch-close" : "page",
+          focus: true,
+          afterUpdate: () => {
+            target = opening
+              ? app.querySelector(".detail-wrap > div:first-child")
+              : closing ? app.querySelector(`.branch-node[data-slug="${previousSlug}"]`) : null;
+            if (target && motionAvailable()) {
+              target._viewMotionMarker = marker;
+              target.style.viewTransitionName = "branch-surface";
+            }
+          },
+          onFinish: () => {
+            for (const element of [source, target]) {
+              if (element?._viewMotionMarker !== marker) continue;
+              element.style.removeProperty("view-transition-name");
+              delete element._viewMotionMarker;
+            }
+          }
+        });
       }
     );
 
