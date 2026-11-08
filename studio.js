@@ -37,7 +37,10 @@ async function runStudio(event) {
       })
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || data.error || '生成失败，请稍后重试。');
+    if (!response.ok) {
+      console.error('Studio generation failed:', data);
+      throw new Error('生成暂时中断，请再试一次。转写稿已经保留。');
+    }
     if (run !== studioRun || !output.isConnected) return;
     const sections = [
       ['analysis', '核心要点'], ['video', '短视频口播与镜头'],
@@ -45,8 +48,10 @@ async function runStudio(event) {
     ];
     output.innerHTML = `<div class="studio-results">${sections.map(([key, title]) => `
       <section class="studio-result"><h3>${title}</h3>
-        <textarea class="field inset-field" data-studio-result="${key}" aria-label="${title}">${escapeHTML(data[key] || '')}</textarea>
-        <div class="studio-result-actions"><button type="button" class="btn btn-secondary" onclick="copyStudioResult('${key}')">复制</button></div>
+        ${data.failed?.includes(key)
+          ? '<p class="muted">这一份暂时没有生成，请再次点击“生成三种内容”重试。</p>'
+          : `<textarea class="field inset-field" data-studio-result="${key}" aria-label="${title}">${escapeHTML(data[key] || '')}</textarea>
+             <div class="studio-result-actions"><button type="button" class="btn btn-secondary" onclick="copyStudioResult('${key}')">复制</button></div>`}
       </section>`).join('')}
       <button type="button" class="btn btn-primary" onclick="downloadStudioResults()">下载全部文字</button>
     </div>`;
