@@ -14,6 +14,7 @@
   // 关掉 Preview URLs：预览地址同样是公开可跑的，会额外消耗 API 额度
   "preview_urls": false,
   "workers_dev": true,
+  "ai": { "binding": "AI" },
   "routes": [
     { "pattern": "branches-api.dearjenniflora.com", "custom_domain": true }
   ],

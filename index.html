@@ -2803,6 +2803,15 @@
         animation-duration: .01ms !important;
       }
     }
+    /* Audio workflow keeps editable results together in the detail surface. */
+    .studio-hint { display: block; margin-top: 8px; color: var(--ink-soft); }
+    .studio-stage { margin-top: 18px; color: var(--ink-soft); }
+    .studio-results { display: grid; gap: 14px; }
+    .studio-result { padding: 20px; border: 1px solid rgba(255,255,255,.75); border-radius: 22px; background: var(--glass-surface); box-shadow: var(--glass-shadow); }
+    .studio-result h3 { margin: 0 0 12px; font-size: 17px; }
+    .studio-result textarea { min-height: 180px; line-height: 1.65; }
+    .studio-result-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .studio-results > .btn { justify-self: start; }
   </style>
 </head>
 
@@ -2917,6 +2926,17 @@
       },
 
       {
+        slug: "audio-to-everywhere",
+        displayName: "一段录音，多种表达",
+        type: "Workflow Branch",
+        typeZh: "工作流枝",
+        name: "Audio to Everywhere",
+        problem: "录下一个想法，整理成短视频、播客和图文内容。",
+        keywords: ["录音", "音频", "转写", "播客", "短视频", "图文", "多平台", "一稿多发"],
+        color: "rgba(169,205,226,.48)"
+      },
+
+      {
         slug: "friends-anon-question-box",
         displayName: "收下朋友的匿名问题",
         type: "Link Branch",
@@ -2937,13 +2957,15 @@
       "less-ai-more-me": "monet-giverny-spring.jpg",
       "morning-trend-radar": "monet-antibes.jpg",
       "what-do-i-need-today": "monet-japanese-bridge.jpg",
-      "friends-anon-question-box": "monet-lily-pond.jpg"
+      "friends-anon-question-box": "monet-lily-pond.jpg",
+      "audio-to-everywhere": "monet-antibes.jpg"
     };
 
     const floatingNeeds = [
       "这篇论文我真的看不进去",
       "AI 写得太像 AI 了",
-      "想和朋友玩匿名提问"
+      "想和朋友玩匿名提问",
+      "录了一段想法，想做成视频、播客和图文"
     ];
 
     const state = {
@@ -3442,6 +3464,27 @@
             ${simpleInput("equipment", "今天有什么器械？", "例如：哑铃 + 瑜伽垫")}
           `;
 
+        case "audio-to-everywhere":
+          return `
+            <div class="field-group">
+              <label class="field-label" for="studioAudio">录音文件</label>
+              <input id="studioAudio" class="field inset-field" type="file" accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg" />
+              <small class="studio-hint">最长 15 分钟 · 25 MB；录音转写后不保存。</small>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="studioTranscript">转写稿</label>
+              <textarea id="studioTranscript" class="field inset-field" maxlength="12000" placeholder="上传录音后自动转写；也可以直接粘贴或修改文字。"></textarea>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="studioAudience">发布给谁？</label>
+              <input id="studioAudience" class="field inset-field" maxlength="100" placeholder="例如：刚开始做自媒体的学生" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="studioPreference">表达偏好</label>
+              <input id="studioPreference" class="field inset-field" maxlength="150" placeholder="例如：真诚、简洁，保留我的口吻" />
+            </div>
+          `;
+
         case "less-ai-more-me":
           return `
             <div class="field-group">
@@ -3628,7 +3671,7 @@
 
                 <form
                   id="branchForm"
-                  onsubmit="${branch.slug === "friends-anon-question-box" ? "createQuestionBox(event)" : `runBranch(event,'${branch.slug}')`}"
+                  onsubmit="${branch.slug === "friends-anon-question-box" ? "createQuestionBox(event)" : branch.slug === "audio-to-everywhere" ? "runStudio(event)" : `runBranch(event,'${branch.slug}')`}"
                 >
 
                   ${branchForm(branch)}
@@ -3639,7 +3682,7 @@
                       type="submit"
                       class="btn btn-primary tactile"
                     >
-                      ${branch.slug === "friends-anon-question-box" ? "创建提问箱" : "生成结果"} <span aria-hidden="true">→</span>
+                      ${branch.slug === "friends-anon-question-box" ? "创建提问箱" : branch.slug === "audio-to-everywhere" ? "生成三种内容" : "生成结果"} <span aria-hidden="true">→</span>
                     </button>
 
                     <button
@@ -3704,6 +3747,9 @@
 
         "training-branch":
           "把一个创作者公开表达过的训练理念整理成可调用的判断体系，再结合你今天的状态给出建议。示例结果不构成医疗建议。",
+
+        "audio-to-everywhere":
+          "录音先转写为可编辑文字，再提取要点，并分别生成短视频、播客和图文素材。",
 
         "less-ai-more-me":
           "接入真实开源 Humanizer-zh Skill。它会先识别公式化结构、空泛拔高、连接词堆叠、过度对称、节奏过齐等常见 AI 写作痕迹，再在尽量保留原意和事实的前提下重写。",
@@ -5065,5 +5111,6 @@
     window.copyQuestionBoxLink = copyQuestionBoxLink;
 
   </script>
+  <script src="studio.js" defer></script>
 </body>
 </html>
