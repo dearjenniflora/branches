@@ -603,8 +603,14 @@ async function runHumanizerBranch(inputs, env, corsHeaders) {
 
   const skill = await loadHumanizerSkill(env);
 
-  const tone = (inputs.tone || "").toString().trim();
+  const scene = (inputs.scene || "").toString().trim();
   const voiceSample = (inputs.voiceSample || "").toString().trim();
+  const sceneInstructions = {
+    paper: "使用场景：学生修改论文。保持学术表达准确、清晰、克制；保留原有论点、术语、数据与引用，不补造论据或文献。",
+    creator: "使用场景：自媒体创作者润色文案。让表达有个人节奏、易读、有吸引力；保留原有观点，不添加夸张宣传或未经提供的事实。",
+    email: "使用场景：日常润色邮件。根据原文对象与目的调整礼貌程度，使表达清楚、简洁、自然；保留具体请求、时间和承诺。",
+    chat: "使用场景：日常润色聊天。让语气像真实对话一样自然、轻松；保留原意和关系分寸，避免书面腔。"
+  };
 
   const lines = [
     "你是枝间 BRANCHES 中正在被调用的 Skill Branch：Less AI. More Me.（去 AI 味）。",
@@ -618,9 +624,7 @@ async function runHumanizerBranch(inputs, env, corsHeaders) {
     "- 保留原文的事实、数字、专有名词与核心意思，不新增信息。",
     "- 不要声称能绕过任何 AI 检测工具。",
     "- 用户文本多为中文，输出也用中文；英文术语、代码保持原样。",
-    tone
-      ? `- 用户希望的语气：${tone}。`
-      : "- 用户没有指定语气，保持自然、具体、像真人写的那样。"
+    `- ${sceneInstructions[scene] || "未指定使用场景。保持自然、具体，并尊重原文的用途与口吻。"}`
   ];
 
   if (voiceSample) {

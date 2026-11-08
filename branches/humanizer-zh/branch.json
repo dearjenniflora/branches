@@ -27,7 +27,7 @@
       "max_chars": 12000
     },
     {
-      "name": "tone",
+      "name": "scene",
       "type": "enum",
       "required": false
     },
