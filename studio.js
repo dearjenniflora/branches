@@ -1,40 +1,104 @@
-/* One recording → editable transcript → shared analysis → three channel drafts. */
+/* Goal workflow: transcribe → human review → three drafts → simple video → role notice. */
 let studioRun = 0;
+let studioReviewedField = null;
+let studioReviewedText = '';
+const STUDIO_GOAL_KEY = 'branches.goal.audio-everywhere';
 
+function studioGoalState() {
+  try { return JSON.parse(localStorage.getItem(STUDIO_GOAL_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveStudioGoal(stage, options = {}) {
+  try {
+    const previous = options.reset ? {} : studioGoalState();
+    localStorage.setItem(STUDIO_GOAL_KEY, JSON.stringify({
+      ...previous, stage: Math.max(options.reset ? 0 : (previous.stage || 0), stage),
+      roleName: options.roleName || previous.roleName || '小枝', updatedAt: Date.now()
+    }));
+  } catch { /* Private browsing must not block the workflow. */ }
+}
+function studioGoalCard() {
+  const goal = studioGoalState();
+  const stage = goal.stage || 0;
+  const rows = [
+    ['录音接收与转写数字枝', stage >= 1 ? '转写稿待校对' : '待开始'],
+    ['文案生成数字枝', stage >= 3 ? '口播 / 博客 / 图文笔记已生成' : stage >= 2 ? '转写稿已确认' : '等待确认转写稿'],
+    ['视频生成数字枝', stage >= 4 ? '配音视频已生成' : '等待口播文案'],
+    ['消息通知数字枝', stage >= 3 ? `${goal.roleName || '小枝'}已发送站内提醒` : '可自定义角色']
+  ];
+  return `<article class="studio-goal">
+    <h2>将一段录音生成不同的传播形式</h2>
+    <ol class="studio-goal-list">${rows.map(([name, status]) => `<li><strong>${escapeHTML(name)}</strong><small>${escapeHTML(status)}</small></li>`).join('')}</ol>
+    <button class="btn btn-primary" onclick="go('branch','audio-to-everywhere')">打开这个目标 →</button>
+  </article>`;
+}
+function invalidateStudioReview() {
+  studioReviewedField = null;
+  studioReviewedText = '';
+  const status = document.querySelector('#studioReviewStatus');
+  if (status) status.textContent = '转写稿有修改，请重新确认。';
+}
+function confirmStudioTranscript() {
+  const field = document.querySelector('#studioTranscript');
+  const text = field?.value.trim() || '';
+  if (!text) return showToast('请先转写录音或粘贴文字。');
+  if (text.length > 12000) return showToast('转写稿请控制在 12000 字以内。');
+  studioReviewedField = field;
+  studioReviewedText = text;
+  document.querySelector('#studioReviewStatus').textContent = '已确认。现在可以生成三种文案。';
+  saveStudioGoal(2);
+  showToast('转写稿已确认。');
+}
+async function transcribeStudio() {
+  const form = document.querySelector('#branchForm');
+  const file = form?.querySelector('#studioAudio')?.files[0];
+  if (!file) return showToast('请先选择录音文件。');
+  if (file.size > 25 * 1024 * 1024) return showToast('录音文件请控制在 25 MB 以内。');
+  const run = ++studioRun;
+  const output = document.querySelector('#mockOutput');
+  const stage = message => {
+    if (run !== studioRun || !output?.isConnected) return;
+    output.classList.remove('hidden');
+    output.innerHTML = `<div class="mock-output" role="status">${escapeHTML(message)}</div>`;
+  };
+  try {
+    invalidateStudioReview();
+    stage('正在读取录音…');
+    const transcript = await transcribeStudioAudio(file, (done, total) => stage(`正在转写录音 · ${done}/${total}`), run);
+    if (run !== studioRun || !output.isConnected) return;
+    const field = form.querySelector('#studioTranscript');
+    field.value = transcript;
+    form.querySelector('#studioAudio').value = '';
+    saveStudioGoal(1, { reset: true });
+    stage('转写完成。请在右侧核对并修改转写稿，然后点击“确认转写稿”。');
+    field.focus();
+  } catch (error) {
+    if (run === studioRun && output?.isConnected) stage(error.message || '转写失败，请重试。');
+  }
+}
 async function runStudio(event) {
   event.preventDefault();
-  const run = ++studioRun;
   const form = event.currentTarget;
+  const field = form.querySelector('#studioTranscript');
+  const transcript = field.value.trim();
+  if (form.querySelector('#studioAudio').files.length) return showToast('请先点击“转写录音”，再核对转写稿。');
+  if (!transcript || studioReviewedField !== field || studioReviewedText !== transcript) {
+    return showToast('请先核对并确认转写稿。');
+  }
+  const run = ++studioRun;
   const output = document.querySelector('#mockOutput');
-  const transcriptField = form.querySelector('#studioTranscript');
-  const audio = form.querySelector('#studioAudio').files[0];
   const setStage = message => {
     if (run !== studioRun || !output?.isConnected) return;
     output.classList.remove('hidden');
     output.innerHTML = `<div class="mock-output"><div class="studio-stage" role="status">${escapeHTML(message)}</div></div>`;
   };
   try {
-    let transcript = transcriptField.value.trim();
-    if (audio) {
-      if (audio.size > 25 * 1024 * 1024) throw new Error('录音文件请控制在 25 MB 以内。');
-      setStage('正在读取录音…');
-      transcript = await transcribeStudioAudio(audio, (done, total) => setStage(`正在转写录音 · ${done}/${total}`), run);
-      if (run !== studioRun || !output.isConnected) return;
-      transcriptField.value = transcript;
-      form.querySelector('#studioAudio').value = ''; // Regeneration uses the edited transcript.
-    }
-    if (!transcript) throw new Error('请上传录音，或先粘贴一段转写稿。');
-    if (transcript.length > 12000) throw new Error('转写稿请控制在 12000 字以内。');
-    setStage('正在提取要点，并生成三种传播形式…');
+    setStage('正在提取要点，并分别生成口播、博客与图文笔记…');
     const response = await fetch(AI_PROXY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'studio',
-        transcript,
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'studio', transcript,
         audience: form.querySelector('#studioAudience').value.trim(),
-        preference: form.querySelector('#studioPreference').value.trim()
-      })
+        preference: form.querySelector('#studioPreference').value.trim() })
     });
     const data = await response.json();
     if (!response.ok) {
@@ -42,22 +106,40 @@ async function runStudio(event) {
       throw new Error('生成暂时中断，请再试一次。转写稿已经保留。');
     }
     if (run !== studioRun || !output.isConnected) return;
+    const roleName = form.querySelector('#studioRoleName').value.trim() || '小枝';
+    const tone = form.querySelector('#studioRoleTone').value;
+    saveStudioGoal(3, { roleName });
     const sections = [
-      ['analysis', '核心要点'], ['video', '短视频口播与镜头'],
-      ['podcast', '播客标题与章节'], ['article', '图文标题与正文']
+      ['analysis', '核心要点'], ['video', '短视频口播文案'],
+      ['blog', '博客长文'], ['note', '图文笔记']
     ];
-    output.innerHTML = `<div class="studio-results">${sections.map(([key, title]) => `
-      <section class="studio-result"><h3>${title}</h3>
-        ${data.failed?.includes(key)
-          ? '<p class="muted">这一份暂时没有生成，请再次点击“生成三种内容”重试。</p>'
-          : `<textarea class="field inset-field" data-studio-result="${key}" aria-label="${title}">${escapeHTML(data[key] || '')}</textarea>
-             <div class="studio-result-actions"><button type="button" class="btn btn-secondary" onclick="copyStudioResult('${key}')">复制</button></div>`}
+    output.innerHTML = `<div class="studio-results">
+      ${sections.map(([key, title]) => `<section class="studio-result"><h3>${title}</h3>
+        ${data.failed?.includes(key) ? '<p class="muted">这一份暂时没有生成，请再次点击生成文案重试。</p>' :
+          `<textarea class="field inset-field" data-studio-result="${key}" aria-label="${title}">${escapeHTML(data[key] || '')}</textarea>
+          <div class="studio-result-actions"><button type="button" class="btn btn-secondary" onclick="copyStudioResult('${key}')">复制</button></div>`}
       </section>`).join('')}
+      ${data.video ? `<section class="studio-result"><h3>视频生成数字枝</h3>
+        <label class="field-label" for="studioNarration">配音文字</label>
+        <textarea id="studioNarration" class="field inset-field" maxlength="1000">${escapeHTML(studioNarration(data.video))}</textarea>
+        <div class="studio-result-actions"><button type="button" class="btn btn-primary" onclick="makeStudioVideo()">生成配音与简单视频</button></div>
+        <div id="studioVideoOutput" aria-live="polite"></div></section>` : ''}
+      <section class="studio-result"><h3>消息通知数字枝</h3><p id="studioNotice">${escapeHTML(studioRoleMessage(roleName, tone, false))}</p></section>
       <button type="button" class="btn btn-primary" onclick="downloadStudioResults()">下载全部文字</button>
     </div>`;
+    showToast(studioRoleMessage(roleName, tone, false));
   } catch (error) {
     if (run === studioRun && output?.isConnected) setStage(error.message || '处理失败，请重试。');
   }
+}
+function studioNarration(text) {
+  return String(text).split('【口播正文】').pop().split('【镜头建议】')[0].trim().slice(0, 1000);
+}
+function studioRoleMessage(name, tone, videoReady) {
+  const work = videoReady ? '配音视频也准备好了' : '三种文案已经准备好了';
+  if (tone === 'playful') return `${name}：好耶，${work}！来看看吧。`;
+  if (tone === 'brief') return `${name}：${work}。`;
+  return `${name}：${work}，慢慢看，有需要再改。`;
 }
 
 async function transcribeStudioAudio(file, onProgress, run) {
@@ -121,4 +203,107 @@ function downloadStudioResults() {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = '枝间-多平台内容.txt'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+let studioVideoUrl = null;
+async function makeStudioVideo() {
+  const narration = document.querySelector('#studioNarration')?.value.trim();
+  const root = document.querySelector('#studioVideoOutput');
+  if (!root || !narration) return showToast('请先确认配音文字。');
+  if (narration.length > 1000) return showToast('配音文字请控制在 1000 字以内。');
+  if (!HTMLCanvasElement.prototype.captureStream || !window.MediaRecorder) {
+    root.textContent = '当前浏览器暂不支持视频导出，请换用最新版 Chrome 或 Edge。';
+    return;
+  }
+  root.textContent = '正在生成中文配音…';
+  let audioContext;
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    await audioContext.resume();
+    const response = await fetch(AI_PROXY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'studioVoice', text: narration })
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || error.detail || '配音暂时不可用。');
+    }
+    const bytes = await response.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(bytes);
+    root.textContent = '正在合成字幕视频…';
+    const canvas = document.createElement('canvas');
+    canvas.width = 720; canvas.height = 1280;
+    const context = canvas.getContext('2d');
+    const artwork = new Image();
+    artwork.src = 'assets/monet/monet-antibes.jpg';
+    await artwork.decode();
+    const captions = narration.match(/[^。！？!?；;]+[。！？!?；;]?/g)?.map(x => x.trim()).filter(Boolean) || [narration];
+    const destination = audioContext.createMediaStreamDestination();
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(destination);
+    const stream = new MediaStream([...canvas.captureStream(24).getVideoTracks(), ...destination.stream.getAudioTracks()]);
+    const mime = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(type => MediaRecorder.isTypeSupported(type));
+    if (!mime) throw new Error('当前浏览器暂不支持视频录制。');
+    const recorder = new MediaRecorder(stream, { mimeType: mime });
+    const chunks = [];
+    recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+    const finished = new Promise((resolve, reject) => {
+      recorder.onerror = () => reject(new Error('视频合成失败。'));
+      recorder.onstop = () => resolve(new Blob(chunks, { type: mime }));
+    });
+    let active = true;
+    const startedAt = audioContext.currentTime;
+    const draw = () => {
+      if (!active) return;
+      const elapsed = Math.max(0, audioContext.currentTime - startedAt);
+      drawStudioFrame(context, artwork, captions, elapsed, audioBuffer.duration);
+      requestAnimationFrame(draw);
+    };
+    draw();
+    recorder.start(1000);
+    source.onended = () => { active = false; if (recorder.state !== 'inactive') recorder.stop(); };
+    source.start();
+    const video = await finished;
+    stream.getTracks().forEach(track => track.stop());
+    if (studioVideoUrl) URL.revokeObjectURL(studioVideoUrl);
+    studioVideoUrl = URL.createObjectURL(video);
+    if (root.isConnected) {
+      const extension = mime.includes('mp4') ? 'mp4' : 'webm';
+      root.innerHTML = `<video controls playsinline style="width:100%;max-height:480px;margin-top:14px;border-radius:18px" src="${studioVideoUrl}"></video>
+        <div class="studio-result-actions"><a class="btn btn-secondary" href="${studioVideoUrl}" download="枝间-短视频.${extension}">下载视频</a></div>`;
+      saveStudioGoal(4);
+      const form = document.querySelector('#branchForm');
+      const roleName = form?.querySelector('#studioRoleName')?.value.trim() || '小枝';
+      const tone = form?.querySelector('#studioRoleTone')?.value || 'gentle';
+      const notice = document.querySelector('#studioNotice');
+      if (notice) notice.textContent = studioRoleMessage(roleName, tone, true);
+      showToast(studioRoleMessage(roleName, tone, true));
+    }
+  } catch (error) {
+    if (root.isConnected) root.textContent = error.message || '视频暂时无法生成。';
+  } finally { await audioContext?.close().catch(() => {}); }
+}
+
+function drawStudioFrame(context, artwork, captions, elapsed, duration) {
+  const { width, height } = context.canvas;
+  const scale = Math.max(width / artwork.width, height / artwork.height);
+  context.drawImage(artwork, (width - artwork.width * scale) / 2, (height - artwork.height * scale) / 2, artwork.width * scale, artwork.height * scale);
+  const shade = context.createLinearGradient(0, 0, 0, height);
+  shade.addColorStop(0, 'rgba(20,35,48,.12)'); shade.addColorStop(1, 'rgba(15,31,45,.72)');
+  context.fillStyle = shade; context.fillRect(0, 0, width, height);
+  context.fillStyle = 'rgba(255,255,255,.93)';
+  context.font = 'bold 43px sans-serif'; context.textAlign = 'center';
+  const index = Math.min(captions.length - 1, Math.floor(elapsed / Math.max(duration, .1) * captions.length));
+  const words = captions[index];
+  const lines = [];
+  let line = '';
+  for (const character of words) {
+    if (context.measureText(line + character).width > width - 110) { lines.push(line); line = character; }
+    else line += character;
+  }
+  if (line) lines.push(line);
+  const top = height * .72 - lines.length * 30;
+  lines.forEach((value, i) => context.fillText(value, width / 2, top + i * 62));
+  context.font = '24px sans-serif'; context.fillText('枝间 · BRANCHES', width / 2, height - 72);
 }

@@ -104,6 +104,10 @@ export default {
         return await composeStudio(body, env, corsHeaders);
       }
 
+      if (body.action === "studioVoice") {
+        return await generateStudioVoice(body, env, corsHeaders);
+      }
+
       if (body.action === "run") {
         return await runBranch(body.slug, body.inputs || {}, env, corsHeaders);
       }
@@ -414,7 +418,7 @@ slug: friends-anon-question-box
 slug: audio-to-everywhere
 类型: Workflow Branch
 适合：
-把已有录音或口述想法转写并改编成短视频、播客、图文等多平台内容。
+把已有录音或口述想法转写并改编成短视频、博客、图文笔记等多平台内容。
 
 判断规则：
 
@@ -849,9 +853,9 @@ async function composeStudio(body, env, corsHeaders) {
     { role: 'user', content: shared }
   ], env, { maxTokens: 3000, thinking: false });
   const jobs = {
-    video: '你是短视频脚本枝。根据共同要点生成 60–90 秒中文口播脚本，附 4–6 段镜头/画面建议和可直接使用的短字幕。不要虚构画面素材已存在。',
-    podcast: '你是播客编辑枝。生成节目标题、节目简介、章节结构和开场/收尾口播。章节只写主题，不编造时间戳。',
-    article: '你是图文编辑枝。生成文章标题、导语、分节正文和配图建议。保持作者观点和事实，不编造数据或来源。'
+    video: '你是短视频口播枝。写适合 60–90 秒竖屏视频的口播：开头三秒提出冲突，主体用说话语言推进，结尾留一个具体行动或问题。严格使用【口播正文】与【镜头建议】两个标题；口播正文写完整可配音的句子，镜头建议列四到六条。不要写博客段落或图文标签，不要虚构素材已存在。',
+    blog: '你是博客写作枝。写一篇有论点、有展开和结尾的长文：标题、导语、至少三个有逻辑递进的小节、结语。段落完整，避免短视频式短句、镜头指令和社交平台标签。只用原稿事实。',
+    note: '你是图文笔记枝。写适合社交图文的短笔记：一个抓人的但不夸张的标题、简短开头、三到五个可独立成图的要点、简短收尾与配图建议。用第一人称和较短段落，避免博客长论证和口播镜头指令。只用原稿事实。'
   };
   const keys = Object.keys(jobs);
   const outcomes = await Promise.allSettled(keys.map(key => callAI([
@@ -866,4 +870,36 @@ async function composeStudio(body, env, corsHeaders) {
   });
   if (failed.length === keys.length) throw new Error('三个内容枝均未产出结果');
   return json({ analysis, ...drafts, failed }, 200, corsHeaders);
+}
+
+
+async function generateStudioVoice(body, env, corsHeaders) {
+  const text = String(body.text || '').trim();
+  if (!text || text.length > 1000) return json({ error: '配音文字请控制在 1000 字以内' }, 400, corsHeaders);
+  if (!env.AI) return json({ error: '配音服务尚未配置' }, 503, corsHeaders);
+  let result;
+  try {
+    result = await env.AI.run('minimax/speech-2.8-turbo', {
+      text, voice_id: 'male-qn-qingse', format: 'mp3', speed: 1, volume: 1, pitch: 0
+    });
+  } catch {
+    result = await env.AI.run('@cf/myshell-ai/melotts', { prompt: text, lang: 'zh' });
+  }
+  const audioUrl = result?.audio?.startsWith?.('https:') ? result.audio : result?.result?.audio;
+  if (audioUrl) {
+    const audio = await fetch(audioUrl);
+    if (!audio.ok) throw new Error('无法读取生成的配音');
+    return new Response(audio.body, { status: 200, headers: { ...corsHeaders, 'Content-Type': audio.headers.get('Content-Type') || 'audio/mpeg', 'Cache-Control': 'no-store' } });
+  }
+  const base64 = result?.audio || (typeof result === 'string' ? result : null);
+  if (base64) {
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+    const type = String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' ? 'audio/wav' : 'audio/mpeg';
+    return new Response(bytes, { status: 200, headers: { ...corsHeaders, 'Content-Type': type, 'Cache-Control': 'no-store' } });
+  }
+  if (result instanceof Response || result instanceof ArrayBuffer || result instanceof Uint8Array) {
+    return new Response(result instanceof Response ? result.body : result, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' } });
+  }
+  throw new Error('配音服务没有返回可用音频');
 }
