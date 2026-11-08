@@ -1826,7 +1826,7 @@
       line-height: 1.13;
     }
 
-    :is(button, textarea, input, select, a):focus-visible {
+    :is(button, textarea, input, select, a):not(.need-input):focus-visible {
       outline: 2px solid #9b7285;
       outline-offset: 3px;
     }
@@ -2497,7 +2497,7 @@
       border-bottom-color: rgba(255, 255, 255, .56);
     }
 
-    :is(button, textarea, input, select, a):focus-visible {
+    :is(button, textarea, input, select, a):not(.need-input):focus-visible {
       outline: 2px solid #49738a;
       outline-offset: 3px;
     }
