@@ -22,7 +22,7 @@ function studioGoalCard() {
   const goal = studioGoalState();
   const stage = goal.stage || 0;
   const rows = [
-    ['录音接收与转写数字枝', stage >= 1 ? '转写稿待校对' : '待开始'],
+    ['录音接收与转写数字枝', stage >= 2 ? '转写稿已确认' : stage >= 1 ? '转写稿待校对' : '待开始'],
     ['文案生成数字枝', stage >= 3 ? '口播 / 博客 / 图文笔记已生成' : goal.draftCount ? `${goal.draftCount}/3 份文案已生成` : stage >= 2 ? '转写稿已确认' : '等待确认转写稿'],
     ['视频生成数字枝', stage >= 4 ? '配音视频已生成' : '等待口播文案'],
     ['消息通知数字枝', goal.draftCount ? `${goal.roleName || '小枝'}已发送站内提醒` : '可自定义角色']
@@ -74,7 +74,7 @@ async function transcribeStudio() {
     stage('转写完成。请在右侧核对并修改转写稿，然后点击“确认转写稿”。');
     field.focus();
   } catch (error) {
-    if (run === studioRun && output?.isConnected) stage(error.message || '转写失败，请重试。');
+    if (run === studioRun && output?.isConnected) stage(studioFriendlyError(error, '转写暂时中断，请重试。'));
   }
 }
 async function runStudio(event) {
@@ -133,8 +133,14 @@ async function runStudio(event) {
     </div>`;
     showToast(noticeMessage);
   } catch (error) {
-    if (run === studioRun && output?.isConnected) setStage(error.message || '处理失败，请重试。');
+    if (run === studioRun && output?.isConnected) setStage(studioFriendlyError(error, '处理暂时中断，请重试。'));
   }
+}
+function studioFriendlyError(error, fallback) {
+  if (error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(error?.message || '')) {
+    return '网络连接暂时中断，请重试。已确认的转写稿仍在当前页面。';
+  }
+  return error?.message || fallback;
 }
 function studioNarration(text) {
   return String(text).split('【口播正文】').pop().split('【镜头建议】')[0].trim().slice(0, 1000);
@@ -286,7 +292,7 @@ async function makeStudioVideo() {
       showToast(studioRoleMessage(roleName, tone, true));
     }
   } catch (error) {
-    if (root.isConnected) root.textContent = error.message || '视频暂时无法生成。';
+    if (root.isConnected) root.textContent = studioFriendlyError(error, '视频暂时无法生成。');
   } finally { await audioContext?.close().catch(() => {}); }
 }
 
