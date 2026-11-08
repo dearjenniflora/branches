@@ -13,7 +13,8 @@ function saveStudioGoal(stage, options = {}) {
     const previous = options.reset ? {} : studioGoalState();
     localStorage.setItem(STUDIO_GOAL_KEY, JSON.stringify({
       ...previous, stage: Math.max(options.reset ? 0 : (previous.stage || 0), stage),
-      roleName: options.roleName || previous.roleName || '小枝', updatedAt: Date.now()
+      roleName: options.roleName || previous.roleName || '小枝',
+      draftCount: options.draftCount ?? previous.draftCount ?? 0, updatedAt: Date.now()
     }));
   } catch { /* Private browsing must not block the workflow. */ }
 }
@@ -22,9 +23,9 @@ function studioGoalCard() {
   const stage = goal.stage || 0;
   const rows = [
     ['录音接收与转写数字枝', stage >= 1 ? '转写稿待校对' : '待开始'],
-    ['文案生成数字枝', stage >= 3 ? '口播 / 博客 / 图文笔记已生成' : stage >= 2 ? '转写稿已确认' : '等待确认转写稿'],
+    ['文案生成数字枝', stage >= 3 ? '口播 / 博客 / 图文笔记已生成' : goal.draftCount ? `${goal.draftCount}/3 份文案已生成` : stage >= 2 ? '转写稿已确认' : '等待确认转写稿'],
     ['视频生成数字枝', stage >= 4 ? '配音视频已生成' : '等待口播文案'],
-    ['消息通知数字枝', stage >= 3 ? `${goal.roleName || '小枝'}已发送站内提醒` : '可自定义角色']
+    ['消息通知数字枝', goal.draftCount ? `${goal.roleName || '小枝'}已发送站内提醒` : '可自定义角色']
   ];
   return `<article class="studio-goal">
     <h2>将一段录音生成不同的传播形式</h2>
@@ -108,7 +109,10 @@ async function runStudio(event) {
     if (run !== studioRun || !output.isConnected) return;
     const roleName = form.querySelector('#studioRoleName').value.trim() || '小枝';
     const tone = form.querySelector('#studioRoleTone').value;
-    saveStudioGoal(3, { roleName });
+    saveStudioGoal(data.failed?.length ? 2 : 3, { roleName, draftCount: 3 - (data.failed?.length || 0) });
+    const noticeMessage = data.failed?.length
+      ? `${roleName}：有 ${3 - data.failed.length} 份文案已完成，其余可重试。`
+      : studioRoleMessage(roleName, tone, false);
     const sections = [
       ['analysis', '核心要点'], ['video', '短视频口播文案'],
       ['blog', '博客长文'], ['note', '图文笔记']
@@ -124,10 +128,10 @@ async function runStudio(event) {
         <textarea id="studioNarration" class="field inset-field" maxlength="1000">${escapeHTML(studioNarration(data.video))}</textarea>
         <div class="studio-result-actions"><button type="button" class="btn btn-primary" onclick="makeStudioVideo()">生成配音与简单视频</button></div>
         <div id="studioVideoOutput" aria-live="polite"></div></section>` : ''}
-      <section class="studio-result"><h3>消息通知数字枝</h3><p id="studioNotice">${escapeHTML(studioRoleMessage(roleName, tone, false))}</p></section>
+      <section class="studio-result"><h3>消息通知数字枝</h3><p id="studioNotice">${escapeHTML(noticeMessage)}</p></section>
       <button type="button" class="btn btn-primary" onclick="downloadStudioResults()">下载全部文字</button>
     </div>`;
-    showToast(studioRoleMessage(roleName, tone, false));
+    showToast(noticeMessage);
   } catch (error) {
     if (run === studioRun && output?.isConnected) setStage(error.message || '处理失败，请重试。');
   }
@@ -226,7 +230,8 @@ async function makeStudioVideo() {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || error.detail || '配音暂时不可用。');
+      console.error('Studio voice failed:', error);
+      throw new Error('配音服务暂不可用，已生成的文案仍可使用。');
     }
     const bytes = await response.arrayBuffer();
     const audioBuffer = await audioContext.decodeAudioData(bytes);
