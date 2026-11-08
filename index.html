@@ -819,6 +819,7 @@
 
     .matching-card {
       width: min(620px, 100%);
+      margin-inline: auto;
       text-align: center;
     }
 
@@ -1078,6 +1079,7 @@
 
     .grow-card {
       width: min(620px, 100%);
+      margin-inline: auto;
       text-align: center;
     }
 
@@ -1948,6 +1950,7 @@
 
     .home-inner {
       gap: clamp(26px, 6vw, 104px);
+      align-items: stretch;
     }
 
     .home-intro,
@@ -1961,6 +1964,10 @@
     }
 
     .home-intro {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
       padding: clamp(32px, 4vw, 62px);
     }
 
@@ -2010,6 +2017,9 @@
     .page-head {
       width: fit-content;
       max-width: 100%;
+      margin-inline: auto;
+      justify-content: center;
+      text-align: center;
       padding: 20px 28px;
       border: 1px solid rgba(255, 255, 255, .64);
       border-radius: 22px;
@@ -2124,8 +2134,10 @@
         gap: 22px;
       }
 
-      .home-intro {
+      .home-intro,
+      .home-action {
         max-width: 620px;
+        margin-inline: auto;
       }
     }
 
@@ -2267,6 +2279,17 @@
         radial-gradient(ellipse at 18% 0%, rgba(255, 255, 255, .36), transparent 58%),
         linear-gradient(145deg, rgba(255, 255, 255, .39), rgba(228, 240, 247, .31));
       border-radius: 25px;
+    }
+
+    .need-submit {
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .floating-needs {
+      justify-content: center;
     }
 
     .need-input {
