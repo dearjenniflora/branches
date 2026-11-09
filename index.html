@@ -2810,8 +2810,13 @@
     .studio-goal h2 { margin: 0 0 22px; font-size: clamp(23px,3vw,33px); }
     .studio-goal-list { display: grid; gap: 12px; padding: 0; margin: 0 0 24px; list-style: none; }
     .studio-goal-list li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,.55); }
+    .studio-goal-link { display: flex; width: 100%; align-items: center; gap: 16px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+    .studio-goal-link small { margin-left: auto; }
+    .studio-goal-link span { opacity: .65; transition: transform 180ms ease, opacity 180ms ease; }
+    .studio-goal-link:hover span, .studio-goal-link:focus-visible span { opacity: 1; transform: translate(2px,-2px); }
+    .studio-goal-link:focus-visible { outline: 2px solid var(--ink-soft); outline-offset: 5px; border-radius: 5px; }
     .studio-goal-list small { color: var(--ink-soft); text-align: right; }
-    @media (max-width: 620px) { .studio-goal-list li { align-items: flex-start; flex-direction: column; gap: 4px; } .studio-goal-list small { text-align: left; } }
+    @media (max-width: 620px) { .studio-goal-link { align-items: flex-start; flex-wrap: wrap; gap: 4px 12px; } .studio-goal-link strong { width: calc(100% - 24px); } .studio-goal-link small { order: 3; width: 100%; margin-left: 0; text-align: left; } .studio-goal-link span { margin-left: auto; } }
     .studio-stage { margin-top: 18px; color: var(--ink-soft); }
     .studio-results { display: grid; gap: 14px; }
     .studio-result { padding: 20px; border: 1px solid rgba(255,255,255,.75); border-radius: 22px; background: var(--glass-surface); box-shadow: var(--glass-shadow); }
@@ -2936,12 +2941,47 @@
       {
         slug: "audio-to-everywhere",
         displayName: "一段录音，多种表达",
+        hideInDiscover: true,
         type: "Workflow Branch",
         typeZh: "工作流枝",
         name: "Audio to Everywhere",
         problem: "录下一个想法，整理成短视频、博客和图文笔记。",
         keywords: ["录音", "音频", "转写", "博客", "短视频", "图文", "多平台", "一稿多发"],
         color: "rgba(169,205,226,.48)"
+      },
+
+      {
+        slug: "studio-transcriber",
+        displayName: "把录音整理成文字",
+        type: "Skill Branch", typeZh: "能力枝", name: "录音接收与转写",
+        problem: "上传录音，校对转写稿，再把确认后的文字交给下一枝。",
+        keywords: ["录音", "转写", "语音转文字", "听写", "逐字稿"],
+        color: "rgba(169,205,226,.48)"
+      },
+      {
+        slug: "studio-copywriter",
+        displayName: "把想法写成三种文案",
+        type: "Skill Branch", typeZh: "能力枝", name: "文案生成",
+        problem: "把确认的文字改写成口播、博客和图文笔记。",
+        keywords: ["口播", "博客", "图文", "文案", "脚本", "多平台"],
+        color: "rgba(217,163,182,.48)"
+      },
+      {
+        slug: "studio-video",
+        displayName: "为文案配音做视频",
+        type: "App Branch", typeZh: "应用枝", name: "视频生成",
+        problem: "用免费本地配音，为口播文案制作可下载的字幕视频。",
+        keywords: ["配音", "视频", "字幕", "竖屏", "口播视频"],
+        color: "rgba(138,166,139,.42)",
+        source: { label: "Piper 中文语音模型", url: "https://huggingface.co/rhasspy/piper-voices/tree/main/zh/zh_CN/huayan/x_low" }
+      },
+      {
+        slug: "studio-notifier",
+        displayName: "让熟悉的角色来提醒",
+        type: "App Branch", typeZh: "应用枝", name: "消息通知",
+        problem: "设置提醒角色和语气，发送站内通知。",
+        keywords: ["通知", "提醒", "角色", "消息"],
+        color: "rgba(169,205,226,.42)"
       },
 
       {
@@ -2966,7 +3006,11 @@
       "morning-trend-radar": "monet-antibes.jpg",
       "what-do-i-need-today": "monet-japanese-bridge.jpg",
       "friends-anon-question-box": "monet-lily-pond.jpg",
-      "audio-to-everywhere": "monet-antibes.jpg"
+      "audio-to-everywhere": "monet-antibes.jpg",
+      "studio-transcriber": "monet-sunrise.png",
+      "studio-copywriter": "monet-giverny-spring.jpg",
+      "studio-video": "monet-cliff-walk.jpg",
+      "studio-notifier": "monet-japanese-bridge.jpg"
     };
 
     const floatingNeeds = [
@@ -3399,7 +3443,7 @@
 
             <section class="branch-grid">
 
-              ${branches.map(branch => `
+              ${branches.filter(branch => !branch.hideInDiscover).map(branch => `
                 <button
                   type="button"
                   class="branch-node"
@@ -3432,6 +3476,58 @@
 
     function branchForm(branch) {
       switch (branch.slug) {
+
+        case "studio-transcriber":
+          return `
+            <div class="field-group">
+              <label class="field-label" for="studioAudio">录音文件</label>
+              <input id="studioAudio" class="field inset-field" type="file" accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg" />
+              <small class="studio-hint">最长 15 分钟 · 25 MB；录音转写后不保存。</small>
+              <button type="button" class="btn btn-secondary studio-step-button" onclick="transcribeStudio()">转写录音</button>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="studioTranscript">核对转写稿</label>
+              <textarea id="studioTranscript" class="field inset-field" maxlength="12000" oninput="invalidateStudioReview()" placeholder="检查并修改转写错误；也可以直接粘贴文字。">${escapeHTML(studioSessionValue('transcript'))}</textarea>
+              <small id="studioReviewStatus" class="studio-hint" role="status">确认后才能交给文案生成枝。</small>
+              <button type="button" class="btn btn-secondary studio-step-button" onclick="handoffStudioTranscript()">交给文案生成枝 →</button>
+            </div>
+          `;
+
+        case "studio-copywriter":
+          return `
+            <div class="field-group">
+              <label class="field-label" for="studioTranscript">转写稿或原始文字</label>
+              <textarea id="studioTranscript" class="field inset-field" maxlength="12000" oninput="invalidateStudioReview()" placeholder="把已核对的转写稿放进来。">${escapeHTML(studioSessionValue('transcript'))}</textarea>
+              <button type="button" class="btn btn-secondary studio-step-button" onclick="confirmStudioTranscript()">确认这份文字</button>
+              <small id="studioReviewStatus" class="studio-hint" role="status">${studioHandoffReviewed() ? '已校对。现在可以生成三种文案。' : '生成前请确认文字准确。'}</small>
+            </div>
+            <div class="field-group"><label class="field-label" for="studioAudience">发布给谁？</label>
+              <input id="studioAudience" class="field inset-field" maxlength="100" placeholder="例如：刚开始做自媒体的学生" /></div>
+            <div class="field-group"><label class="field-label" for="studioPreference">表达偏好</label>
+              <input id="studioPreference" class="field inset-field" maxlength="150" placeholder="例如：真诚、简洁，保留我的口吻" /></div>
+          `;
+
+        case "studio-video":
+          return `
+            <div class="field-group"><label class="field-label" for="studioNarration">口播文案</label>
+              <textarea id="studioNarration" class="field inset-field" maxlength="1000" placeholder="粘贴口播正文，或从文案生成枝接收。">${escapeHTML(studioSessionValue('narration'))}</textarea></div>
+            <small class="studio-hint">配音在浏览器本地生成；首次使用需下载约 21 MB 语音模型，无须账号或配音额度。</small>
+            <div id="studioVideoOutput" aria-live="polite"></div>
+          `;
+
+        case "studio-notifier":
+          return `
+            <div class="field-group"><label class="field-label" for="studioRoleName">通知角色</label>
+              <input id="studioRoleName" class="field inset-field" maxlength="24" value="${escapeHTML(studioRoleSetting('name'))}" placeholder="例如：小枝" /></div>
+            <div class="field-group"><label class="field-label" for="studioRoleTone">说话方式</label>
+              <select id="studioRoleTone" class="field inset-field">
+                <option value="gentle" ${studioRoleSetting('tone') === 'gentle' ? 'selected' : ''}>温柔</option>
+                <option value="brief" ${studioRoleSetting('tone') === 'brief' ? 'selected' : ''}>简洁</option>
+                <option value="playful" ${studioRoleSetting('tone') === 'playful' ? 'selected' : ''}>活泼</option>
+              </select></div>
+            <div class="field-group"><label class="field-label" for="studioNoticeText">提醒内容</label>
+              <textarea id="studioNoticeText" class="field inset-field" maxlength="300" placeholder="例如：三种文案已经准备好了。"></textarea></div>
+          `;
 
         case "teach-me-like-this":
           return `
@@ -3496,12 +3592,12 @@
             </div>
             <div class="field-group">
               <label class="field-label" for="studioRoleName">通知角色</label>
-              <input id="studioRoleName" class="field inset-field" maxlength="24" placeholder="给提醒你的角色起个名字，例如：小枝" />
+              <input id="studioRoleName" class="field inset-field" maxlength="24" value="${escapeHTML(studioRoleSetting('name'))}" placeholder="给提醒你的角色起个名字，例如：小枝" />
             </div>
             <div class="field-group">
               <label class="field-label" for="studioRoleTone">角色说话方式</label>
               <select id="studioRoleTone" class="field inset-field">
-                <option value="gentle">温柔</option><option value="brief">简洁</option><option value="playful">活泼</option>
+                <option value="gentle" ${studioRoleSetting('tone') === 'gentle' ? 'selected' : ''}>温柔</option><option value="brief" ${studioRoleSetting('tone') === 'brief' ? 'selected' : ''}>简洁</option><option value="playful" ${studioRoleSetting('tone') === 'playful' ? 'selected' : ''}>活泼</option>
               </select>
             </div>
           `;
@@ -3692,7 +3788,7 @@
 
                 <form
                   id="branchForm"
-                  onsubmit="${branch.slug === "friends-anon-question-box" ? "createQuestionBox(event)" : branch.slug === "audio-to-everywhere" ? "runStudio(event)" : `runBranch(event,'${branch.slug}')`}"
+                  onsubmit="${branch.slug === "friends-anon-question-box" ? "createQuestionBox(event)" : branch.slug === "audio-to-everywhere" || branch.slug === "studio-copywriter" ? "runStudio(event)" : branch.slug === "studio-transcriber" ? "event.preventDefault();confirmStudioTranscript()" : branch.slug === "studio-video" ? "event.preventDefault();makeStudioVideo()" : branch.slug === "studio-notifier" ? "sendStudioNotice(event)" : `runBranch(event,'${branch.slug}')`}"
                 >
 
                   ${branchForm(branch)}
@@ -3703,7 +3799,7 @@
                       type="submit"
                       class="btn btn-primary tactile"
                     >
-                      ${branch.slug === "friends-anon-question-box" ? "创建提问箱" : branch.slug === "audio-to-everywhere" ? "3 · 生成三种文案" : "生成结果"} <span aria-hidden="true">→</span>
+                      ${branch.slug === "friends-anon-question-box" ? "创建提问箱" : branch.slug === "audio-to-everywhere" ? "3 · 生成三种文案" : branch.slug === "studio-transcriber" ? "确认转写稿" : branch.slug === "studio-copywriter" ? "生成三种文案" : branch.slug === "studio-video" ? "生成配音与视频" : branch.slug === "studio-notifier" ? "发送站内通知" : "生成结果"} <span aria-hidden="true">→</span>
                     </button>
 
                     <button
@@ -3771,6 +3867,11 @@
 
         "audio-to-everywhere":
           "录音先转写并由你校对，再生成短视频口播、博客与图文笔记；配音视频与角色通知组成同一目标。",
+
+        "studio-transcriber": "上传录音，校对转写稿并确认，然后交给文案生成数字枝。",
+        "studio-copywriter": "将文字分别写成短视频口播、博客长文和图文笔记。",
+        "studio-video": "把口播文案配上免费的本地中文语音，生成可下载的字幕视频。",
+        "studio-notifier": "自定义角色名称和语气，在枝间发送站内提醒。",
 
         "less-ai-more-me":
           "接入真实开源 Humanizer-zh Skill。它会先识别公式化结构、空泛拔高、连接词堆叠、过度对称、节奏过齐等常见 AI 写作痕迹，再在尽量保留原意和事实的前提下重写。",

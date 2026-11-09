@@ -3,6 +3,27 @@ let studioRun = 0;
 let studioReviewedField = null;
 let studioReviewedText = '';
 const STUDIO_GOAL_KEY = 'branches.goal.audio-everywhere';
+const STUDIO_SESSION_KEY = 'branches.studio.handoff';
+const STUDIO_ROLE_KEY = 'branches.studio.role';
+
+function studioSessionValue(key) {
+  try { return JSON.parse(sessionStorage.getItem(STUDIO_SESSION_KEY) || '{}')[key] || ''; }
+  catch { return ''; }
+}
+function studioSessionSet(key, value) {
+  try {
+    const previous = JSON.parse(sessionStorage.getItem(STUDIO_SESSION_KEY) || '{}');
+    sessionStorage.setItem(STUDIO_SESSION_KEY, JSON.stringify({ ...previous, [key]: value }));
+  } catch { /* The handoff can still be done by copying text. */ }
+}
+function studioHandoffReviewed() {
+  const transcript = studioSessionValue('transcript');
+  return Boolean(transcript && studioSessionValue('approvedTranscript') === transcript);
+}
+function studioRoleSetting(key) {
+  try { return JSON.parse(localStorage.getItem(STUDIO_ROLE_KEY) || '{}')[key] || (key === 'name' ? '小枝' : 'gentle'); }
+  catch { return key === 'name' ? '小枝' : 'gentle'; }
+}
 
 function studioGoalState() {
   try { return JSON.parse(localStorage.getItem(STUDIO_GOAL_KEY)) || {}; }
@@ -14,7 +35,8 @@ function saveStudioGoal(stage, options = {}) {
     localStorage.setItem(STUDIO_GOAL_KEY, JSON.stringify({
       ...previous, stage: Math.max(options.reset ? 0 : (previous.stage || 0), stage),
       roleName: options.roleName || previous.roleName || '小枝',
-      draftCount: options.draftCount ?? previous.draftCount ?? 0, updatedAt: Date.now()
+      draftCount: options.draftCount ?? previous.draftCount ?? 0,
+      noticeSent: options.noticeSent ?? previous.noticeSent ?? false, updatedAt: Date.now()
     }));
   } catch { /* Private browsing must not block the workflow. */ }
 }
@@ -25,11 +47,11 @@ function studioGoalCard() {
     ['录音接收与转写数字枝', stage >= 2 ? '转写稿已确认' : stage >= 1 ? '转写稿待校对' : '待开始'],
     ['文案生成数字枝', stage >= 3 ? '口播 / 博客 / 图文笔记已生成' : goal.draftCount ? `${goal.draftCount}/3 份文案已生成` : stage >= 2 ? '转写稿已确认' : '等待确认转写稿'],
     ['视频生成数字枝', stage >= 4 ? '配音视频已生成' : '等待口播文案'],
-    ['消息通知数字枝', goal.draftCount ? `${goal.roleName || '小枝'}已发送站内提醒` : '可自定义角色']
+    ['消息通知数字枝', goal.noticeSent ? `${goal.roleName || '小枝'}已发送站内提醒` : '可自定义角色']
   ];
   return `<article class="studio-goal">
     <h2>将一段录音生成不同的传播形式</h2>
-    <ol class="studio-goal-list">${rows.map(([name, status]) => `<li><strong>${escapeHTML(name)}</strong><small>${escapeHTML(status)}</small></li>`).join('')}</ol>
+    <ol class="studio-goal-list">${rows.map(([name, status], index) => `<li><button type="button" class="studio-goal-link" onclick="go('branch','${['studio-transcriber','studio-copywriter','studio-video','studio-notifier'][index]}')"><strong>${escapeHTML(name)}</strong><small>${escapeHTML(status)}</small><span aria-hidden="true">↗</span></button></li>`).join('')}</ol>
     <button class="btn btn-primary" onclick="go('branch','audio-to-everywhere')">打开这个目标 →</button>
   </article>`;
 }
@@ -46,9 +68,38 @@ function confirmStudioTranscript() {
   if (text.length > 12000) return showToast('转写稿请控制在 12000 字以内。');
   studioReviewedField = field;
   studioReviewedText = text;
+  studioSessionSet('approvedTranscript', text);
   document.querySelector('#studioReviewStatus').textContent = '已确认。现在可以生成三种文案。';
   saveStudioGoal(2);
   showToast('转写稿已确认。');
+}
+function handoffStudioTranscript() {
+  const field = document.querySelector('#studioTranscript');
+  const text = field?.value.trim() || '';
+  if (!text || studioReviewedField !== field || studioReviewedText !== text) return showToast('请先核对并确认转写稿。');
+  studioSessionSet('transcript', text);
+  go('branch', 'studio-copywriter');
+}
+function handoffStudioNarration() {
+  const text = document.querySelector('[data-studio-result="video"]')?.value || '';
+  if (!text.trim()) return showToast('请先生成口播文案。');
+  studioSessionSet('narration', studioNarration(text));
+  go('branch', 'studio-video');
+}
+function sendStudioNotice(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const name = form.querySelector('#studioRoleName').value.trim() || '小枝';
+  const tone = form.querySelector('#studioRoleTone').value;
+  const message = form.querySelector('#studioNoticeText').value.trim();
+  if (!message) return showToast('先写下提醒内容。');
+  try { localStorage.setItem(STUDIO_ROLE_KEY, JSON.stringify({ name, tone })); } catch {}
+  saveStudioGoal(0, { roleName: name, noticeSent: true });
+  const notice = `${name}：${message}`;
+  const output = document.querySelector('#mockOutput');
+  output.classList.remove('hidden');
+  output.innerHTML = `<div class="mock-output" role="status">${escapeHTML(notice)}</div>`;
+  showToast(notice);
 }
 async function transcribeStudio() {
   const form = document.querySelector('#branchForm');
@@ -82,8 +133,10 @@ async function runStudio(event) {
   const form = event.currentTarget;
   const field = form.querySelector('#studioTranscript');
   const transcript = field.value.trim();
-  if (form.querySelector('#studioAudio').files.length) return showToast('请先点击“转写录音”，再核对转写稿。');
-  if (!transcript || studioReviewedField !== field || studioReviewedText !== transcript) {
+  if (form.querySelector('#studioAudio')?.files.length) return showToast('请先点击“转写录音”，再核对转写稿。');
+  const reviewed = studioReviewedField === field && studioReviewedText === transcript;
+  const approvedHandoff = state.currentSlug === 'studio-copywriter' && studioSessionValue('approvedTranscript') === transcript;
+  if (!transcript || (!reviewed && !approvedHandoff)) {
     return showToast('请先核对并确认转写稿。');
   }
   const run = ++studioRun;
@@ -107,9 +160,10 @@ async function runStudio(event) {
       throw new Error('生成暂时中断，请再试一次。转写稿已经保留。');
     }
     if (run !== studioRun || !output.isConnected) return;
-    const roleName = form.querySelector('#studioRoleName').value.trim() || '小枝';
-    const tone = form.querySelector('#studioRoleTone').value;
-    saveStudioGoal(data.failed?.length ? 2 : 3, { roleName, draftCount: 3 - (data.failed?.length || 0) });
+    const integrated = state.currentSlug === 'audio-to-everywhere';
+    const roleName = form.querySelector('#studioRoleName')?.value.trim() || studioRoleSetting('name');
+    const tone = form.querySelector('#studioRoleTone')?.value || studioRoleSetting('tone');
+    saveStudioGoal(data.failed?.length ? 2 : 3, { roleName, draftCount: 3 - (data.failed?.length || 0), noticeSent: integrated });
     const noticeMessage = data.failed?.length
       ? `${roleName}：有 ${3 - data.failed.length} 份文案已完成，其余可重试。`
       : studioRoleMessage(roleName, tone, false);
@@ -123,22 +177,25 @@ async function runStudio(event) {
           `<textarea class="field inset-field" data-studio-result="${key}" aria-label="${title}">${escapeHTML(data[key] || '')}</textarea>
           <div class="studio-result-actions"><button type="button" class="btn btn-secondary" onclick="copyStudioResult('${key}')">复制</button></div>`}
       </section>`).join('')}
-      ${data.video ? `<section class="studio-result"><h3>视频生成数字枝</h3>
+      ${integrated && data.video ? `<section class="studio-result"><h3>视频生成数字枝</h3>
         <label class="field-label" for="studioNarration">配音文字</label>
         <textarea id="studioNarration" class="field inset-field" maxlength="1000">${escapeHTML(studioNarration(data.video))}</textarea>
+        <small class="studio-hint">免费本地配音；首次使用需下载约 21 MB 语音模型。</small>
         <div class="studio-result-actions"><button type="button" class="btn btn-primary" onclick="makeStudioVideo()">生成配音与简单视频</button></div>
         <div id="studioVideoOutput" aria-live="polite"></div></section>` : ''}
-      <section class="studio-result"><h3>消息通知数字枝</h3><p id="studioNotice">${escapeHTML(noticeMessage)}</p></section>
+      ${!integrated && data.video ? '<button type="button" class="btn btn-secondary" onclick="handoffStudioNarration()">交给视频生成枝 →</button>' : ''}
+      ${integrated ? `<section class="studio-result"><h3>消息通知数字枝</h3><p id="studioNotice">${escapeHTML(noticeMessage)}</p></section>` : ''}
       <button type="button" class="btn btn-primary" onclick="downloadStudioResults()">下载全部文字</button>
     </div>`;
-    showToast(noticeMessage);
+    if (integrated) showToast(noticeMessage);
+    else showToast('三种文案已生成。');
   } catch (error) {
     if (run === studioRun && output?.isConnected) setStage(studioFriendlyError(error, '处理暂时中断，请重试。'));
   }
 }
-function studioFriendlyError(error, fallback) {
+function studioFriendlyError(error, fallback, networkMessage = '网络连接暂时中断，请重试。已确认的转写稿仍在当前页面。') {
   if (error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(error?.message || '')) {
-    return '网络连接暂时中断，请重试。已确认的转写稿仍在当前页面。';
+    return networkMessage;
   }
   return error?.message || fallback;
 }
@@ -225,22 +282,24 @@ async function makeStudioVideo() {
     root.textContent = '当前浏览器暂不支持视频导出，请换用最新版 Chrome 或 Edge。';
     return;
   }
-  root.textContent = '正在生成中文配音…';
+  root.textContent = '正在准备免费中文配音，首次使用需要下载语音模型…';
   let audioContext;
   try {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     await audioContext.resume();
-    const response = await fetch(AI_PROXY, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'studioVoice', text: narration })
-    });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      console.error('Studio voice failed:', error);
-      throw new Error('配音服务暂不可用，已生成的文案仍可使用。');
+    const { predict } = await import('./assets/tts/vits-web.js');
+    const segments = studioVoiceSegments(narration);
+    const audioParts = [];
+    for (const [index, segment] of segments.entries()) {
+      root.textContent = `正在合成中文配音 · ${index + 1}/${segments.length}`;
+      const wav = await predict({ text: segment, voiceId: 'zh_CN-huayan-x_low' }, progress => {
+        if (!root.isConnected || index > 0) return;
+        const percent = progress.total ? Math.round(progress.loaded / progress.total * 100) : 0;
+        root.textContent = percent < 100 ? `正在下载免费语音模型 · ${percent}%` : `正在合成中文配音 · 1/${segments.length}`;
+      });
+      audioParts.push(await audioContext.decodeAudioData(await wav.arrayBuffer()));
     }
-    const bytes = await response.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(bytes);
+    const audioBuffer = studioJoinAudio(audioContext, audioParts);
     root.textContent = '正在合成字幕视频…';
     const canvas = document.createElement('canvas');
     canvas.width = 720; canvas.height = 1280;
@@ -283,17 +342,46 @@ async function makeStudioVideo() {
       const extension = mime.includes('mp4') ? 'mp4' : 'webm';
       root.innerHTML = `<video controls playsinline style="width:100%;max-height:480px;margin-top:14px;border-radius:18px" src="${studioVideoUrl}"></video>
         <div class="studio-result-actions"><a class="btn btn-secondary" href="${studioVideoUrl}" download="枝间-短视频.${extension}">下载视频</a></div>`;
-      saveStudioGoal(4);
       const form = document.querySelector('#branchForm');
-      const roleName = form?.querySelector('#studioRoleName')?.value.trim() || '小枝';
-      const tone = form?.querySelector('#studioRoleTone')?.value || 'gentle';
+      const roleName = form?.querySelector('#studioRoleName')?.value.trim() || studioRoleSetting('name');
+      const tone = form?.querySelector('#studioRoleTone')?.value || studioRoleSetting('tone');
+      saveStudioGoal(4, { roleName, noticeSent: true });
       const notice = document.querySelector('#studioNotice');
       if (notice) notice.textContent = studioRoleMessage(roleName, tone, true);
       showToast(studioRoleMessage(roleName, tone, true));
     }
   } catch (error) {
-    if (root.isConnected) root.textContent = studioFriendlyError(error, '视频暂时无法生成。');
+    if (root.isConnected) root.textContent = studioFriendlyError(error, '免费配音暂时无法完成，请检查网络后重试。', '语音模型下载中断，请检查网络后重试。');
   } finally { await audioContext?.close().catch(() => {}); }
+}
+
+function studioVoiceSegments(text) {
+  const sentences = text.match(/[^。！？!?；;]+[。！？!?；;]?/g) || [text];
+  const segments = [];
+  let current = '';
+  for (const sentence of sentences) {
+    if (current && current.length + sentence.length > 140) { segments.push(current.trim()); current = ''; }
+    for (let start = 0; start < sentence.length; start += 140) {
+      const part = sentence.slice(start, start + 140);
+      if (current.length + part.length > 140) { segments.push(current.trim()); current = ''; }
+      current += part;
+    }
+  }
+  if (current.trim()) segments.push(current.trim());
+  return segments;
+}
+
+function studioJoinAudio(context, parts) {
+  const gap = Math.round(context.sampleRate * .12);
+  const length = parts.reduce((sum, part) => sum + part.length, 0) + gap * Math.max(0, parts.length - 1);
+  const joined = context.createBuffer(1, length, context.sampleRate);
+  const samples = joined.getChannelData(0);
+  let offset = 0;
+  for (const part of parts) {
+    samples.set(part.getChannelData(0), offset);
+    offset += part.length + gap;
+  }
+  return joined;
 }
 
 function drawStudioFrame(context, artwork, captions, elapsed, duration) {

@@ -32,7 +32,11 @@ const BRANCHES = [
   "morning-trend-radar",
   "what-do-i-need-today",
   "friends-anon-question-box",
-  "audio-to-everywhere"
+  "audio-to-everywhere",
+  "studio-transcriber",
+  "studio-copywriter",
+  "studio-video",
+  "studio-notifier"
 ];
 
 /* 只允许你自己的站点调用 */
@@ -102,10 +106,6 @@ export default {
 
       if (body.action === "studio") {
         return await composeStudio(body, env, corsHeaders);
-      }
-
-      if (body.action === "studioVoice") {
-        return await generateStudioVoice(body, env, corsHeaders);
       }
 
       if (body.action === "run") {
@@ -420,11 +420,31 @@ slug: audio-to-everywhere
 适合：
 把已有录音或口述想法转写并改编成短视频、博客、图文笔记等多平台内容。
 
+8.
+slug: studio-transcriber
+类型: Skill Branch
+适合：只想把录音转成可校对的文字。
+
+9.
+slug: studio-copywriter
+类型: Skill Branch
+适合：已有文字，需要分别写成口播、博客和图文笔记。
+
+10.
+slug: studio-video
+类型: App Branch
+适合：已有口播文案，需要免费中文配音和字幕视频。
+
+11.
+slug: studio-notifier
+类型: App Branch
+适合：设置角色化的站内提醒。
+
 判断规则：
 
 - 不要因为关键词相似就强行匹配。
 - 优先理解用户真正想解决的问题。
-- 如果七个都明显不合适，就返回 null。
+- 如果列表中都明显不合适，就返回 null。
 - 不要创造列表之外的 Branch。
 - 不要推荐工具。
 - 不要解释 AI 技术。
@@ -870,36 +890,4 @@ async function composeStudio(body, env, corsHeaders) {
   });
   if (failed.length === keys.length) throw new Error('三个内容枝均未产出结果');
   return json({ analysis, ...drafts, failed }, 200, corsHeaders);
-}
-
-
-async function generateStudioVoice(body, env, corsHeaders) {
-  const text = String(body.text || '').trim();
-  if (!text || text.length > 1000) return json({ error: '配音文字请控制在 1000 字以内' }, 400, corsHeaders);
-  if (!env.AI) return json({ error: '配音服务尚未配置' }, 503, corsHeaders);
-  let result;
-  try {
-    result = await env.AI.run('minimax/speech-2.8-turbo', {
-      text, voice_id: 'male-qn-qingse', format: 'mp3', speed: 1, volume: 1, pitch: 0
-    });
-  } catch {
-    result = await env.AI.run('@cf/myshell-ai/melotts', { prompt: text, lang: 'zh' });
-  }
-  const audioUrl = result?.audio?.startsWith?.('https:') ? result.audio : result?.result?.audio;
-  if (audioUrl) {
-    const audio = await fetch(audioUrl);
-    if (!audio.ok) throw new Error('无法读取生成的配音');
-    return new Response(audio.body, { status: 200, headers: { ...corsHeaders, 'Content-Type': audio.headers.get('Content-Type') || 'audio/mpeg', 'Cache-Control': 'no-store' } });
-  }
-  const base64 = result?.audio || (typeof result === 'string' ? result : null);
-  if (base64) {
-    const binary = atob(base64);
-    const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
-    const type = String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' ? 'audio/wav' : 'audio/mpeg';
-    return new Response(bytes, { status: 200, headers: { ...corsHeaders, 'Content-Type': type, 'Cache-Control': 'no-store' } });
-  }
-  if (result instanceof Response || result instanceof ArrayBuffer || result instanceof Uint8Array) {
-    return new Response(result instanceof Response ? result.body : result, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' } });
-  }
-  throw new Error('配音服务没有返回可用音频');
 }
