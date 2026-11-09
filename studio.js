@@ -180,7 +180,7 @@ async function runStudio(event) {
       ${integrated && data.video ? `<section class="studio-result"><h3>视频生成数字枝</h3>
         <label class="field-label" for="studioNarration">配音文字</label>
         <textarea id="studioNarration" class="field inset-field" maxlength="1000">${escapeHTML(studioNarration(data.video))}</textarea>
-        <small class="studio-hint">免费本地配音；首次使用需下载约 21 MB 语音模型。</small>
+        <small class="studio-hint">免费本地配音；首次使用需下载约 50 MB 运行文件。</small>
         <div class="studio-result-actions"><button type="button" class="btn btn-primary" onclick="makeStudioVideo()">生成配音与简单视频</button></div>
         <div id="studioVideoOutput" aria-live="polite"></div></section>` : ''}
       ${!integrated && data.video ? '<button type="button" class="btn btn-secondary" onclick="handoffStudioNarration()">交给视频生成枝 →</button>' : ''}
