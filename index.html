@@ -3383,8 +3383,9 @@
         const goal = createGoal(need);
         if (!goal) { go("goals"); return; }
         updateGoal(goal.id, { status: "unverified", failure: goalFailureMessage(error) });
-        showToast("匹配暂时中断，目标已保存，可重新分析。");
+        showToast("目标已保存，正在尝试分析所需能力。");
         go("goal", goal.id);
+        analyzeGoal(goal.id, { matchUnverified: true });
       }
     }
 
@@ -5203,6 +5204,7 @@
 
       else if (state.view === "goal") {
         app.innerHTML = goalDetailView(findGoal(state.currentGoalId));
+        resumeGoalIfNeeded(state.currentGoalId);
       }
 
       else if (state.view === "branch") {

@@ -2,6 +2,14 @@
 const GOALS_STORAGE_KEY = 'branches.goals';
 let goalAnalysisSequence = 0;
 const goalAnalysisRuns = new Map();
+const goalAutoRetry = new Set();
+
+function resumeGoalIfNeeded(id) {
+  const goal = findGoal(id);
+  if (!goal || goalAutoRetry.has(id) || !['unverified', 'error'].includes(goal.status)) return;
+  goalAutoRetry.add(id);
+  queueMicrotask(() => retryGoal(id));
+}
 
 function readGoals() {
   try {
@@ -46,11 +54,27 @@ function removeGoal(id) {
 
 function goalProgress(goal) {
   if (goal.status === 'analyzing') return goalAnalysisRuns.has(goal.id) ? '正在分析所需数字枝…' : '分析中断 · 可重试';
+  if (goal.status === 'provisional') return '初步分析 · 待智能匹配验证';
   if (goal.status === 'unverified') return '匹配暂时中断 · 待重试';
   if (goal.status === 'error') return '能力分析暂时中断 · 待重试';
   const available = goal.steps.filter(step => step.slug).length;
   const missing = goal.steps.length - available;
   return `已有 ${available} 枝 · 待补足 ${missing} 枝`;
+}
+
+function provisionalSteps(need) {
+  const text = need.toLowerCase();
+  const steps = [];
+  const add = (name, purpose, slug) => { if (!steps.some(step => step.slug === slug)) steps.push({ name, purpose, slug }); };
+  if (/录音|音频|语音|口述|转写|听写/.test(text)) add('录音转写与校对', '现有数字枝可把录音转成可修改的文字', 'studio-transcriber');
+  if (/口播|博客|图文|文案|脚本|自媒体/.test(text)) add('内容文案改编', '现有数字枝可生成口播、博客和图文笔记', 'studio-copywriter');
+  if (/视频|影片|配音|字幕/.test(text)) add('基础配音视频', '现有数字枝只支持免费配音和简单字幕视频', 'studio-video');
+  if (/匿名|提问箱/.test(text)) add('匿名提问箱', '现有数字枝可建立匿名提问入口', 'friends-anon-question-box');
+  if (/提醒|通知/.test(text)) add('站内消息提醒', '现有数字枝可发送角色化站内提醒', 'studio-notifier');
+  if (/润色|改写|ai味|ai 味/.test(text)) add('文字润色', '现有数字枝可让文字更自然', 'less-ai-more-me');
+  if (/出门|行李|带什么|物品清单/.test(text)) add('出门物品清单', '现有数字枝可整理要带的东西', 'what-do-i-need-today');
+  steps.push({ name: '其余能力待确认', purpose: '智能分析恢复后再核对完整目标与缺失能力', slug: null });
+  return steps;
 }
 
 function goalFailureMessage(error) {
@@ -90,13 +114,17 @@ function goalsView() {
 
 function goalDetailView(goal) {
   if (!goal) return `${navbar()}<main class="page"><div class="shell"><button class="text-action back" onclick="go('goals')">← 返回目标</button><h1 class="editorial">没有找到这个目标。</h1></div></main>`;
-  const pending = goal.status !== 'ready';
+  const hasSteps = goal.status === 'ready' || goal.status === 'provisional';
   return `${navbar()}<main class="page"><div class="shell">
     <button class="text-action back" onclick="go('goals')">← 返回目标</button>
     <div class="page-head"><h1 class="editorial">${escapeHTML(goal.title || goal.need)}</h1></div>
     <section class="goal-detail">
       ${goal.title !== goal.need ? `<p class="goal-original">${escapeHTML(goal.need)}</p>` : ''}
-      ${pending ? `<div class="goal-analysis-state" role="status">${escapeHTML(goalProgress(goal))}
+      ${goal.status === 'provisional' ? `<div class="goal-analysis-state" role="status">${escapeHTML(goalProgress(goal))}
+        ${goal.failure ? `<p class="goal-failure">${escapeHTML(goal.failure)}</p>` : ''}
+        <button class="btn btn-secondary" type="button" onclick="retryGoal('${goal.id}')">重新验证 →</button>
+      </div>` : ''}
+      ${!hasSteps ? `<div class="goal-analysis-state" role="status">${escapeHTML(goalProgress(goal))}
         ${goal.failure ? `<p class="goal-failure">${escapeHTML(goal.failure)}</p>` : ''}
         ${goal.status !== 'analyzing' || !goalAnalysisRuns.has(goal.id) ? `<button class="btn btn-secondary" type="button" onclick="retryGoal('${goal.id}')">重新分析 →</button>` : ''}
       </div>` : `<ol class="goal-steps">${goal.steps.map((step, index) => `
@@ -110,7 +138,7 @@ function goalDetailView(goal) {
   </div></main>`;
 }
 
-async function analyzeGoal(id) {
+async function analyzeGoal(id, options = {}) {
   const goal = findGoal(id);
   if (!goal) return;
   const run = ++goalAnalysisSequence;
@@ -143,12 +171,12 @@ async function analyzeGoal(id) {
     })).filter(step => step.name);
     if (!steps.length) throw new Error('No valid steps');
     goalAnalysisRuns.delete(id);
-    updateGoal(id, { title: String(result.title || goal.need).slice(0, 40), steps, status: 'ready' });
+    updateGoal(id, { title: String(result.title || goal.need).slice(0, 40), steps, status: options.matchUnverified ? 'provisional' : 'ready', failure: options.matchUnverified ? '完整匹配尚未验证；以下能力拆解供参考。' : '' });
   } catch (error) {
     console.error('Goal analysis failed:', error);
     if (goalAnalysisRuns.get(id) === run) {
       goalAnalysisRuns.delete(id);
-      updateGoal(id, { status: 'error', failure: goalFailureMessage(error) });
+      updateGoal(id, { status: 'provisional', steps: provisionalSteps(goal.need), failure: goalFailureMessage(error) });
     }
   }
 }
@@ -156,7 +184,7 @@ async function analyzeGoal(id) {
 async function retryGoal(id) {
   const goal = findGoal(id);
   if (!goal) return;
-  if (goal.status !== 'unverified') return analyzeGoal(id);
+  if (goal.status !== 'unverified' && goal.status !== 'provisional') return analyzeGoal(id);
   updateGoal(id, { status: 'analyzing', failure: '' });
   try {
     const result = await requestNeedMatch(goal.need);
@@ -168,6 +196,6 @@ async function retryGoal(id) {
     }
   } catch (error) {
     console.error('Goal match retry failed:', error);
-    updateGoal(id, { status: 'unverified', failure: goalFailureMessage(error) });
+    analyzeGoal(id, { matchUnverified: true });
   }
 }
