@@ -38,6 +38,7 @@ const BRANCHES = [
   "studio-video",
   "studio-notifier"
 ];
+const MATCHABLE_BRANCHES = new Set(BRANCHES.filter(slug => !["training-branch", "morning-trend-radar"].includes(slug)));
 
 /* 只允许你自己的站点调用 */
 const ALLOWED_ORIGINS = [
@@ -102,6 +103,10 @@ export default {
 
       if (body.action === "match") {
         return await matchBranch(body.need, env, corsHeaders);
+      }
+
+      if (body.action === "analyzeGoal") {
+        return await analyzeGoal(body.need, env, corsHeaders);
       }
 
       if (body.action === "studio") {
@@ -359,16 +364,18 @@ function publicBox(box) {
    真正的保护是 Cloudflare 侧的 Rate Limiting / Turnstile。 */
 
 async function matchBranch(need, env, corsHeaders) {
+  need = cleanText(need, 500);
+  if (!need) return json({ error: "请填写目标" }, 400, corsHeaders);
   const systemPrompt = `
 你是「枝间 BRANCHES」的需求理解与 Branch 匹配器。
 
-枝间不是 App Builder。
-你不生成新应用。
-你的任务只有一个：
+只有当一个现有且已上线的 Branch 能完整交付用户要的结果时，才返回它的 slug。
+只能解决一部分、需要用户自行串联多个枝、或该枝只是概念演示，都返回 null。
+例如“录音变成短视频、博客和图文”可以匹配 audio-to-everywhere；
+“录音生成完整剪辑影片并自动发布”不能匹配，因为现有工作流只做简单字幕视频且不自动发布。
+不要只凭关键词相似作判断，也不要创造新的 Branch。
 
-理解用户真实需求，并从已有 Branch 中找到最匹配的一个。
-
-目前有以下七个 Branch：
+现有数字枝：
 
 1.
 slug: teach-me-like-this
@@ -380,7 +387,7 @@ slug: teach-me-like-this
 
 2.
 slug: training-branch
-类型: Persona Branch
+类型: Persona Branch（概念演示，不可匹配）
 适合：
 希望按照某个健身创作者公开的训练理念，
 结合当天状态得到训练建议。
@@ -394,7 +401,7 @@ AI 写出来的文字 AI 味太重；
 
 4.
 slug: morning-trend-radar
-类型: Workflow Branch
+类型: Workflow Branch（概念演示，不可匹配）
 适合：
 追踪热点、行业信息、资讯；
 自动整理、分类、摘要和推送。
@@ -440,14 +447,8 @@ slug: studio-notifier
 类型: App Branch
 适合：设置角色化的站内提醒。
 
-判断规则：
-
-- 不要因为关键词相似就强行匹配。
-- 优先理解用户真正想解决的问题。
-- 如果列表中都明显不合适，就返回 null。
-- 不要创造列表之外的 Branch。
-- 不要推荐工具。
-- 不要解释 AI 技术。
+判断的是完整可交付性，不是相关性。若目标有多个部分，单枝缺任何一部分就返回 null。
+不确定是否完整支持时返回 null。
 
 只输出 JSON，不要 Markdown，不要代码块：
 
@@ -464,7 +465,7 @@ slug: studio-notifier
       { role: "user", content: `我的需求是：${need}` }
     ],
     env,
-    { maxTokens: 1600 }
+    { maxTokens: 1200, thinking: false }
   );
 
   let parsed;
@@ -480,11 +481,34 @@ slug: studio-notifier
     throw new Error("AI 返回的匹配结果不是有效 JSON");
   }
 
-  if (parsed.slug && !BRANCHES.includes(parsed.slug)) {
-    parsed.slug = null;
-  }
+  const slug = MATCHABLE_BRANCHES.has(parsed.slug) && Number(parsed.confidence) >= 0.75 ? parsed.slug : null;
+  return json({ slug, confidence: Number(parsed.confidence) || 0, reason: cleanText(parsed.reason, 100) }, 200, corsHeaders);
+}
 
-  return json(parsed, 200, corsHeaders);
+async function analyzeGoal(need, env, corsHeaders) {
+  need = cleanText(need, 500);
+  if (!need) return json({ error: "请填写目标" }, 400, corsHeaders);
+  const prompt = `你是枝间的目标拆解器。将用户想得到的最终结果拆成 2–6 个按执行顺序排列的数字能力。只输出 JSON：{"title":"简短目标标题","steps":[{"name":"能力名称","purpose":"它负责交付什么","slug":null}]}。
+现有且已上线的数字枝及其真实能力：
+teach-me-like-this：解释用户提供的论文或文本；less-ai-more-me：润色用户提供的文字；what-do-i-need-today：生成出门清单；friends-anon-question-box：建立匿名提问箱；studio-transcriber：录音转写并交用户校对；studio-copywriter：把文字改编成短视频口播、博客、图文笔记；studio-video：把口播文案配免费本地中文语音，生成简单字幕视频；studio-notifier：在站内发送角色化提醒；audio-to-everywhere：现成的录音转写、人工校对、多形式文案、简单字幕视频和站内通知工作流。
+每一步如果确实能由上述一个枝完成，slug 写对应值；缺少工具、外部服务、自动发布、真实影片剪辑、跨枝连接等写 null。不要把概念演示当成已上线。不要承诺不存在的能力。步骤应该覆盖完整目标，不能遗漏交付、发布等用户明确要求。`;
+  const text = await callAI([
+    { role: "system", content: prompt },
+    { role: "user", content: need }
+  ], env, { maxTokens: 1800, thinking: false });
+  let parsed;
+  try { parsed = JSON.parse(text.replace(/```json/gi, "").replace(/```/g, "").trim()); }
+  catch { throw new Error("AI 返回的目标分析不是有效 JSON"); }
+  if (!Array.isArray(parsed.steps) || !parsed.steps.length) throw new Error("目标分析没有步骤");
+  const steps = parsed.steps.slice(0, 6).filter(step => step && typeof step === "object").map(step => ({
+    name: cleanText(step.name, 36), purpose: cleanText(step.purpose, 110),
+    slug: MATCHABLE_BRANCHES.has(step.slug) ? step.slug : null
+  })).filter(step => step.name);
+  if (!steps.length) throw new Error("目标分析没有有效步骤");
+  if (steps.every(step => step.slug) && !steps.some(step => step.slug === "audio-to-everywhere")) {
+    steps.push({ name: "能力协同与成果交付", purpose: "将各数字枝的输入输出连接并统一交付", slug: null });
+  }
+  return json({ title: cleanText(parsed.title, 40) || need.slice(0, 40), steps }, 200, corsHeaders);
 }
 
 async function runBranch(slug, inputs, env, corsHeaders) {

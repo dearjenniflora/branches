@@ -2824,6 +2824,32 @@
     .studio-result textarea { min-height: 180px; line-height: 1.65; }
     .studio-result-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
     .studio-results > .btn { justify-self: start; }
+    .goal-entry { display: grid; gap: 14px; max-width: 800px; margin: 0 0 36px; padding: clamp(22px,4vw,34px); border: 1px solid rgba(255,255,255,.78); border-radius: 30px; background: var(--glass-surface); box-shadow: var(--glass-shadow); backdrop-filter: blur(24px); }
+    .goal-entry textarea { width: 100%; min-height: 128px; resize: vertical; }
+    .goal-entry .btn { justify-self: start; }
+    .goal-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; align-items: start; }
+    .goal-grid .studio-goal { max-width: none; }
+    .goal-card { min-width: 0; border: 1px solid rgba(255,255,255,.8); border-radius: 28px; background: var(--glass-surface); box-shadow: var(--glass-shadow); backdrop-filter: blur(24px); overflow: hidden; transition: transform 220ms var(--motion-ease), box-shadow 220ms var(--motion-ease); }
+    .goal-card:hover { transform: translateY(-3px); box-shadow: 0 18px 35px rgba(44,66,76,.14); }
+    .goal-card-open { position: relative; display: grid; gap: 12px; width: 100%; min-height: 200px; padding: 30px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+    .goal-card h2 { margin: 0; padding-right: 25px; font-size: clamp(21px,2.5vw,30px); line-height: 1.35; }
+    .goal-card p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
+    .goal-card small { align-self: end; color: var(--ink-soft); }
+    .goal-card-open > span { position: absolute; top: 28px; right: 28px; }
+    .goal-card-open:focus-visible { outline: 2px solid var(--ink); outline-offset: -5px; }
+    .goal-detail { max-width: 920px; padding: clamp(24px,4vw,42px); border: 1px solid rgba(255,255,255,.8); border-radius: 30px; background: var(--glass-surface); box-shadow: var(--glass-shadow); backdrop-filter: blur(24px); }
+    .page:has(.goal-detail) .page-head h1 { max-width: 950px; font-size: clamp(34px,5vw,64px); overflow-wrap: anywhere; }
+    .goal-original { margin: 0 0 25px; color: var(--ink-soft); line-height: 1.65; }
+    .goal-steps { margin: 0; padding: 0; list-style: none; }
+    .goal-step { display: grid; grid-template-columns: 38px minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 20px 0; border-top: 1px solid rgba(255,255,255,.58); }
+    .goal-step-number { align-self: start; color: var(--ink-soft); }
+    .goal-step h2 { margin: 0 0 5px; font-size: 18px; }
+    .goal-step p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.55; }
+    .goal-step-action small { color: var(--ink-soft); white-space: nowrap; }
+    .goal-analysis-state { display: grid; justify-items: start; gap: 20px; padding: 24px 0; border-top: 1px solid rgba(255,255,255,.58); }
+    @media (max-width: 760px) { .goal-grid { grid-template-columns: 1fr; } .goal-step { grid-template-columns: 28px minmax(0,1fr); } .goal-step-action { grid-column: 2; } }
+    @media (max-width: 620px) { .goal-entry .btn { width: 100%; } .goal-card-open { min-height: 170px; } .nav-links { gap: 2px; } }
+    @media (prefers-reduced-motion: reduce) { .goal-card { transition: none; } .goal-card:hover { transform: none; } }
   </style>
 </head>
 
@@ -2832,6 +2858,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="studio.js"></script>
+  <script src="goals.js"></script>
   <script>
     /* =========================================================
        BRANCHES MVP
@@ -3024,7 +3051,8 @@
       view: "home",
       currentSlug: null,
       lastNeed: "",
-      mineTab: "goals",
+      mineTab: "saved",
+      currentGoalId: null,
       boxId: null,
       ownerToken: null,
       matchUnavailable: false
@@ -3161,14 +3189,15 @@
     }
 
     function go(view, slug = null) {
-      const target = view === "branch" && slug ? `branch/${slug}` : view;
+      const target = (view === "branch" || view === "goal") && slug ? `${view}/${slug}` : view;
       if (location.hash === `#${target}`) {
-        if (state.view === view && (view !== "branch" || state.currentSlug === slug)) {
+        if (state.view === view && (view !== "branch" || state.currentSlug === slug) && (view !== "goal" || state.currentGoalId === slug)) {
           window.scrollTo(0, 0);
         } else {
           updateWithMotion(() => {
             state.view = view;
             state.currentSlug = slug;
+            if (view === "goal") state.currentGoalId = slug;
             render();
             window.scrollTo(0, 0);
           }, { kind: "page", focus: true });
@@ -3184,7 +3213,7 @@
 
     function navbar() {
       const active =
-        state.view === "branch" ? "branches" : state.view;
+        state.view === "branch" ? "branches" : state.view === "goal" ? "goals" : state.view;
 
       return `
         <header class="navbar">
@@ -3213,6 +3242,8 @@
               >
                 发现
               </button>
+
+              <button class="nav-link ${active === "goals" ? "active" : ""}" onclick="go('goals')">目标</button>
 
               <button
                 class="nav-link ${active === "mine" ? "active" : ""}"
@@ -3272,30 +3303,6 @@
        MATCH
     ========================================================= */
 
-    function matchNeed(text) {
-      const normalized = text.toLowerCase();
-
-      let best = null;
-      let bestScore = 0;
-
-      branches.forEach(branch => {
-        let score = 0;
-
-        branch.keywords.forEach(keyword => {
-          if (normalized.includes(keyword.toLowerCase())) {
-            score += keyword.length >= 3 ? 2 : 1;
-          }
-        });
-
-        if (score > bestScore) {
-          best = branch;
-          bestScore = score;
-        }
-      });
-
-      return bestScore >= 2 ? best : null;
-    }
-
     function rememberNeed(text) {
       const memories = read(STORAGE.memories);
 
@@ -3310,10 +3317,19 @@
       );
     }
 
+    async function requestNeedMatch(need) {
+      const response = await fetch(AI_PROXY, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "match", need })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }
+
     async function submitNeed(event) {
       event.preventDefault();
 
-      const input = document.querySelector("#needInput");
+      const input = event.currentTarget.querySelector("textarea");
       const need = input.value.trim();
 
       if (!need) {
@@ -3334,56 +3350,29 @@
       }, { kind: "page", focus: true });
 
       try {
-        const response = await fetch(AI_PROXY, {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            action: "match",
-            need
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
+        const result = await requestNeedMatch(need);
 
         console.log("枝间 AI 匹配：", result);
 
         if (requestId !== matchSequence || state.view !== "matching") return;
 
-        if (result.slug && getBranch(result.slug)) {
+        if (result.slug && getBranch(result.slug) && !getBranch(result.slug).isDemo) {
           go("branch", result.slug);
         } else {
-          go("grow");
+          const goal = createGoal(need);
+          if (!goal) { go("goals"); return; }
+          go("goal", goal.id);
+          analyzeGoal(goal.id);
         }
 
       } catch (error) {
         console.error("AI matcher failed:", error);
-        state.matchUnavailable = true;
-
-        /*
-          AI 暂时挂掉时，不让产品直接死掉。
-          自动降级为本地 matcher。
-        */
-
-        const fallback = matchNeed(need);
-
         if (requestId !== matchSequence || state.view !== "matching") return;
-
-        if (fallback) {
-          showToast("匹配服务暂时繁忙，已按关键词查找。");
-
-          go("branch", fallback.slug);
-
-        } else {
-          go("grow");
-        }
+        const goal = createGoal(need);
+        if (!goal) { go("goals"); return; }
+        updateGoal(goal.id, { status: "unverified" });
+        showToast("匹配暂时中断，已保存目标，可稍后重试。");
+        go("goal", goal.id);
       }
     }
 
@@ -4660,7 +4649,6 @@
 
               <nav class="mine-tabs">
 
-                ${mineTabButton("goals", "目标")}
                 ${mineTabButton("saved", "收藏")}
                 ${mineTabButton("seeds", "想法")}
                 ${mineTabButton("adaptations", "定制")}
@@ -4711,8 +4699,6 @@
     }
 
     function mineTabContent() {
-
-      if (state.mineTab === "goals") return studioGoalCard();
 
       if (state.mineTab === "saved") {
         const saved = read(STORAGE.saved);
@@ -5071,6 +5057,17 @@
         return;
       }
 
+      if (hash === "goals") {
+        state.view = "goals";
+        return;
+      }
+
+      if (hash.startsWith("goal/")) {
+        state.view = "goal";
+        state.currentGoalId = hash.slice(5);
+        return;
+      }
+
       if (hash === "grow") {
         state.view = "grow";
         return;
@@ -5160,6 +5157,8 @@
         home: "monet-sunrise.png",
         matching: "monet-sunrise.png",
         branches: "monet-water-lilies.jpg",
+        goals: "monet-parasol.jpg",
+        goal: "monet-parasol.jpg",
         grow: "monet-cliff-walk.jpg",
         mine: "monet-parasol.jpg",
         "question-box": "monet-lily-pond.jpg",
@@ -5184,6 +5183,14 @@
 
       else if (state.view === "branches") {
         app.innerHTML = branchesView();
+      }
+
+      else if (state.view === "goals") {
+        app.innerHTML = goalsView();
+      }
+
+      else if (state.view === "goal") {
+        app.innerHTML = goalDetailView(findGoal(state.currentGoalId));
       }
 
       else if (state.view === "branch") {
@@ -5221,6 +5228,7 @@
     window.go = go;
     window.fillNeed = fillNeed;
     window.submitNeed = submitNeed;
+    window.retryGoal = retryGoal;
     window.runBranch = runBranch;
     window.toggleSave = toggleSave;
     window.toggleAdaptation = toggleAdaptation;
