@@ -2847,6 +2847,7 @@
     .goal-step p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.55; }
     .goal-step-action small { color: var(--ink-soft); white-space: nowrap; }
     .goal-analysis-state { display: grid; justify-items: start; gap: 20px; padding: 24px 0; border-top: 1px solid rgba(255,255,255,.58); }
+    .goal-failure { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
     @media (max-width: 760px) { .goal-grid { grid-template-columns: 1fr; } .goal-step { grid-template-columns: 28px minmax(0,1fr); } .goal-step-action { grid-column: 2; } }
     @media (max-width: 620px) { .goal-entry .btn { width: 100%; } .goal-card-open { min-height: 170px; } .nav-links { gap: 2px; } }
     @media (prefers-reduced-motion: reduce) { .goal-card { transition: none; } .goal-card:hover { transform: none; } }
@@ -3318,12 +3319,23 @@
     }
 
     async function requestNeedMatch(need) {
-      const response = await fetch(AI_PROXY, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "match", need })
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await fetch(AI_PROXY, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "match", need })
+          });
+          if (!response.ok) {
+            const error = new Error(`HTTP ${response.status}`);
+            error.status = response.status;
+            throw error;
+          }
+          return await response.json();
+        } catch (error) {
+          if (attempt || (error.status && error.status < 500 && error.status !== 429)) throw error;
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+      }
     }
 
     async function submitNeed(event) {
@@ -3370,8 +3382,8 @@
         if (requestId !== matchSequence || state.view !== "matching") return;
         const goal = createGoal(need);
         if (!goal) { go("goals"); return; }
-        updateGoal(goal.id, { status: "unverified" });
-        showToast("匹配暂时中断，已保存目标，可稍后重试。");
+        updateGoal(goal.id, { status: "unverified", failure: goalFailureMessage(error) });
+        showToast("匹配暂时中断，目标已保存，可重新分析。");
         go("goal", goal.id);
       }
     }

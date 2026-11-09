@@ -53,6 +53,14 @@ function goalProgress(goal) {
   return `已有 ${available} 枝 · 待补足 ${missing} 枝`;
 }
 
+function goalFailureMessage(error) {
+  if (error?.status === 429) return '请求过于频繁，请稍后再试。';
+  if (error?.status === 403) return '枝间接口拒绝了请求，请刷新页面后重试。';
+  if (error?.status >= 500) return '智能服务暂时出错，请稍后重试。';
+  if (error?.status) return `请求未完成（HTTP ${error.status}），请重试。`;
+  return '未能连接枝间接口，请检查网络后重试。';
+}
+
 function goalCard(goal) {
   return `<article class="goal-card">
     <button type="button" class="goal-card-open" onclick="go('goal','${goal.id}')">
@@ -89,6 +97,7 @@ function goalDetailView(goal) {
     <section class="goal-detail">
       ${goal.title !== goal.need ? `<p class="goal-original">${escapeHTML(goal.need)}</p>` : ''}
       ${pending ? `<div class="goal-analysis-state" role="status">${escapeHTML(goalProgress(goal))}
+        ${goal.failure ? `<p class="goal-failure">${escapeHTML(goal.failure)}</p>` : ''}
         ${goal.status !== 'analyzing' || !goalAnalysisRuns.has(goal.id) ? `<button class="btn btn-secondary" type="button" onclick="retryGoal('${goal.id}')">重新分析 →</button>` : ''}
       </div>` : `<ol class="goal-steps">${goal.steps.map((step, index) => `
         <li class="goal-step"><span class="goal-step-number">${index + 1}</span><div>
@@ -106,13 +115,17 @@ async function analyzeGoal(id) {
   if (!goal) return;
   const run = ++goalAnalysisSequence;
   goalAnalysisRuns.set(id, run);
-  updateGoal(id, { status: 'analyzing' });
+  updateGoal(id, { status: 'analyzing', failure: '' });
   try {
     const response = await fetch(AI_PROXY, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'analyzeGoal', need: goal.need })
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(`HTTP ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
     const result = await response.json();
     if (goalAnalysisRuns.get(id) !== run) return;
     if (result.matchedSlug && getBranch(result.matchedSlug) && !getBranch(result.matchedSlug).isDemo) {
@@ -135,7 +148,7 @@ async function analyzeGoal(id) {
     console.error('Goal analysis failed:', error);
     if (goalAnalysisRuns.get(id) === run) {
       goalAnalysisRuns.delete(id);
-      updateGoal(id, { status: 'error' });
+      updateGoal(id, { status: 'error', failure: goalFailureMessage(error) });
     }
   }
 }
@@ -144,7 +157,7 @@ async function retryGoal(id) {
   const goal = findGoal(id);
   if (!goal) return;
   if (goal.status !== 'unverified') return analyzeGoal(id);
-  updateGoal(id, { status: 'analyzing' });
+  updateGoal(id, { status: 'analyzing', failure: '' });
   try {
     const result = await requestNeedMatch(goal.need);
     if (result.slug && getBranch(result.slug) && !getBranch(result.slug).isDemo) {
@@ -155,6 +168,6 @@ async function retryGoal(id) {
     }
   } catch (error) {
     console.error('Goal match retry failed:', error);
-    updateGoal(id, { status: 'unverified' });
+    updateGoal(id, { status: 'unverified', failure: goalFailureMessage(error) });
   }
 }
